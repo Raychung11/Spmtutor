@@ -6,6 +6,7 @@ function teacher_layout_start(string $title, array $user, string $current): void
 {
     $nav = build_nav([
         ['label' => 'Dashboard',     'href' => 'teacher/dashboard.php'],
+        ['label' => 'Classes',       'href' => 'teacher/classes.php'],
         ['label' => 'Review Marking', 'href' => 'teacher/review.php'],
         ['label' => 'Notifications', 'href' => 'notifications.php'],
     ], $current);

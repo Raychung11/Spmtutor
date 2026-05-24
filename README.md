@@ -53,7 +53,8 @@ Native PHP 8 front controllers (public_html/*.php + role folders)
 | 11 | Gamification | **Built** (XP, levels, streaks, badges) |
 | 12 | Subscription & payment | **Built** (plans, auto trial, Billplz checkout + callback, invoices) |
 | 13 | Notifications | **Built** (in-app bell + feed; email/WhatsApp channels integration-ready) |
-| 14 | Admin panel | **Built** (dashboard, users, subjects, topics, skills, questions, AI prompts) |
+| 10b | School / class management | **Built** (classes, roster, assignments + submissions, schools table) |
+| 14 | Admin panel | **Built** (dashboard, advanced analytics, users, subjects, topics, skills, questions, AI prompts) |
 | 15 | Landing page CMS | **Built** (editable sections, testimonials, FAQs) |
 
 ## 3. Database
@@ -74,14 +75,17 @@ public_html/
             *_layout.php  (.htaccess deny)
   notifications.php  (shared, role-aware)
   inc/      ... + diagnostic.php learning.php billing.php reports.php
-            marking.php notifications.php
-  admin/    dashboard users subjects topics skills questions ai_prompts landing
+            marking.php notifications.php classes.php whatsapp.php api.php
+  admin/    dashboard analytics users subjects topics skills questions
+            ai_prompts landing
   student/  dashboard tutor diagnostic learning_path practice snap_check
-            progress subscription
+            assignments progress subscription
   parent/   dashboard
-  teacher/  dashboard review
+  teacher/  dashboard classes review
   api/      tutor.php topics.php billplz_callback.php
-  cron/     weekly_reports.php  (CLI only)
+  api/v1/   index auth me subjects progress tutor notifications  (mobile REST)
+  cron/     weekly_reports.php reminders.php  (CLI only)
+  sql/migrations/ phase4.sql  (for existing installs)
   uploads/  (no script execution)
   assets/   css/style.css  js/app.js  img/
   sql/      schema.sql  seed.sql  (.htaccess deny)
@@ -97,8 +101,25 @@ public_html/
 - **Phase 3 (done):** Snap & Check AI marking (image/typed answer + marking
   prompt, JSON-parsed feedback), teacher review & score override, in-app
   notifications with topbar bell. (OCR provider is integration-ready.)
-- **Phase 4:** School/class management, advanced analytics, WhatsApp reminders,
-  mobile app API.
+- **Phase 4 (done):** Class & assignment management (+ schools table), advanced
+  analytics dashboard, WhatsApp + study-reminder cron, token-based mobile REST
+  API (`/api/v1`).
+
+## Mobile API (`/api/v1`)
+
+Bearer-token REST API for a future mobile app. Tokens are issued on login and
+stored hashed (`api_tokens`).
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| POST | `/api/v1/auth.php` | Login `{email,password}` → `{token,user}` |
+| GET  | `/api/v1/me.php` | Current user, XP, streak, progress, unread count |
+| GET  | `/api/v1/subjects.php` | Subjects (`?subject_id=` → topics) |
+| GET  | `/api/v1/progress.php` | Summary + subject/topic stats |
+| POST | `/api/v1/tutor.php` | Ask the AI tutor `{message,subject_id?,session_id?}` |
+| GET/POST | `/api/v1/notifications.php` | List / mark-all-read |
+
+Send `Authorization: Bearer <token>` on authenticated calls. CORS enabled.
 
 ## 6. MVP feature priority
 
@@ -118,7 +139,11 @@ public_html/
 6. To enable live payments, set `BILLPLZ_API_KEY`, `BILLPLZ_COLLECTION_ID`,
    `BILLPLZ_X_SIGNATURE`, `APP_URL` (and `BILLPLZ_SANDBOX=false` for production).
    Without a key, checkout runs in demo mode and activates plans instantly.
-7. Schedule `cron/weekly_reports.php` weekly (Hostinger cron) for parent reports.
+7. Schedule `cron/weekly_reports.php` weekly and `cron/reminders.php` daily
+   (Hostinger cron) for parent reports and study reminders.
+8. To enable WhatsApp reminders, set `WHATSAPP_TOKEN` + `WHATSAPP_PHONE_ID`
+   (Meta Cloud API). Without them, reminders are in-app only and logged.
+9. Existing pre-Phase-4 databases: run `sql/migrations/phase4.sql` once.
 
 ## 8. AI safety
 

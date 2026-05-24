@@ -6,6 +6,7 @@ function admin_layout_start(string $title, array $user, string $current): void
 {
     $nav = build_nav([
         ['label' => 'Dashboard',    'href' => 'admin/dashboard.php'],
+        ['label' => 'Analytics',    'href' => 'admin/analytics.php'],
         ['label' => 'Users',        'href' => 'admin/users.php'],
         ['label' => 'Subjects',     'href' => 'admin/subjects.php'],
         ['label' => 'Topics',       'href' => 'admin/topics.php'],

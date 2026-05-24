@@ -11,6 +11,7 @@ function student_layout_start(string $title, array $user, string $current): void
         ['label' => 'Learning Path', 'href' => 'student/learning_path.php'],
         ['label' => 'Practice',      'href' => 'student/practice.php'],
         ['label' => 'Snap & Check',  'href' => 'student/snap_check.php'],
+        ['label' => 'Assignments',   'href' => 'student/assignments.php'],
         ['label' => 'Progress',      'href' => 'student/progress.php'],
         ['label' => 'Notifications', 'href' => 'notifications.php'],
         ['label' => 'Subscription',  'href' => 'student/subscription.php'],

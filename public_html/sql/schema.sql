@@ -529,6 +529,7 @@ CREATE TABLE IF NOT EXISTS weekly_ai_reports (
 CREATE TABLE IF NOT EXISTS teacher_classes (
   id          INT AUTO_INCREMENT PRIMARY KEY,
   teacher_user_id INT NOT NULL,
+  school_id   INT NULL,
   name        VARCHAR(150) NOT NULL,
   subject_id  INT NULL,
   created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -757,6 +758,32 @@ CREATE TABLE IF NOT EXISTS lessons (
   created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_lesson_subject (subject_id)
+) ENGINE=InnoDB;
+
+-- =====================================================================
+-- PHASE 4: Schools, API tokens
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS schools (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  name        VARCHAR(190) NOT NULL,
+  type        ENUM('school','learning_center') NOT NULL DEFAULT 'learning_center',
+  contact_email VARCHAR(190) NULL,
+  phone       VARCHAR(30) NULL,
+  status      VARCHAR(20) NOT NULL DEFAULT 'active',
+  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS api_tokens (
+  id           INT AUTO_INCREMENT PRIMARY KEY,
+  user_id      INT NOT NULL,
+  token_hash   CHAR(64) NOT NULL,
+  name         VARCHAR(80) NULL,
+  last_used_at DATETIME NULL,
+  expires_at   DATETIME NULL,
+  created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_token (token_hash),
+  INDEX idx_token_user (user_id),
+  CONSTRAINT fk_token_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 SET FOREIGN_KEY_CHECKS = 1;

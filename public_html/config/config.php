@@ -44,6 +44,15 @@ define('BILLPLZ_API_BASE', BILLPLZ_SANDBOX
 // Public base URL used for payment callbacks/redirects (e.g. https://app.example.com).
 define('APP_URL', rtrim(getenv('APP_URL') ?: '', '/'));
 
+// --- WhatsApp reminders (integration-ready, Meta Cloud API) ---
+// When WHATSAPP_TOKEN is empty, reminders are logged instead of sent.
+define('WHATSAPP_TOKEN', getenv('WHATSAPP_TOKEN') ?: '');
+define('WHATSAPP_PHONE_ID', getenv('WHATSAPP_PHONE_ID') ?: '');
+define('WHATSAPP_API_BASE', getenv('WHATSAPP_API_BASE') ?: 'https://graph.facebook.com/v21.0');
+
+// --- Mobile API ---
+define('API_TOKEN_TTL_DAYS', (int) (getenv('API_TOKEN_TTL_DAYS') ?: 30));
+
 // --- Error reporting ---
 if (APP_DEBUG) {
     error_reporting(E_ALL);
