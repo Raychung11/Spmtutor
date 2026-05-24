@@ -54,7 +54,7 @@ Native PHP 8 front controllers (public_html/*.php + role folders)
 | 12 | Subscription & payment | **Built** (plans, auto trial, Billplz checkout + callback, invoices) |
 | 13 | Notifications | **Built** (in-app bell + feed; email/WhatsApp channels integration-ready) |
 | 10b | School / class management | **Built** (classes, roster, assignments + submissions, schools table) |
-| 14 | Admin panel | **Built** (dashboard, advanced analytics, users, subjects, topics, skills, questions, AI prompts) |
+| 14 | Admin panel | **Built** (dashboard, analytics, users, subjects, topics, skills, questions, subscriptions, schools, AI prompts) |
 | 15 | Landing page CMS | **Built** (editable sections, testimonials, FAQs) |
 
 ## 3. Database
@@ -79,7 +79,7 @@ public_html/
             marking.php notifications.php classes.php whatsapp.php api.php
             ratelimit.php mailer.php
   admin/    dashboard analytics users subjects topics skills questions
-            ai_prompts landing
+            subscriptions schools ai_prompts landing
   student/  dashboard tutor diagnostic learning_path practice snap_check
             assignments progress subscription api_tokens
   parent/   dashboard
