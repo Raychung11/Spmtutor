@@ -17,17 +17,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('error', 'Your school must be approved before managing members.');
         redirect('school/students.php');
     }
-    if (input('action') === 'add') {
-        [$ok, $msg] = add_school_member($sid, strtolower(input('email')), 'student');
+    $a = input('action');
+    if ($a === 'add') {
+        [$ok, $msg] = invite_or_add_member($sid, strtolower(input('email')), 'student', (int) $user['id']);
         flash($ok ? 'success' : 'error', $msg);
-    } elseif (input('action') === 'remove') {
+    } elseif ($a === 'remove') {
         remove_school_member($sid, input_int('member_id'));
         flash('success', 'Student removed from school.');
+    } elseif ($a === 'revoke_invite') {
+        revoke_invitation($sid, input_int('invite_id'));
+        flash('success', 'Invitation revoked.');
+    } elseif ($a === 'resend_invite') {
+        resend_invitation($sid, input_int('invite_id'));
+        flash('success', 'Invitation resent.');
     }
     redirect('school/students.php');
 }
 
 $students = school_members($sid, 'student');
+$invites  = array_filter(pending_invitations($sid), fn($i) => $i['member_role'] === 'student');
 
 school_layout_start('Students', $user, 'students.php');
 ?>
@@ -35,15 +43,34 @@ school_layout_start('Students', $user, 'students.php');
   <div class="flash flash--info">Enrolling students unlocks once your school is approved.</div>
 <?php endif; ?>
 <div class="card">
-  <h3>Enrol a student</h3>
-  <p class="muted">The student must already have a student account. Enter their email to enrol them.</p>
+  <h3>Enrol or invite a student</h3>
+  <p class="muted">If they already have a student account they're enrolled instantly. Otherwise we email them an invitation to register and join.</p>
   <form method="post" style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
     <?= csrf_field() ?>
     <input type="hidden" name="action" value="add">
     <div class="field" style="margin:0;flex:1;min-width:220px"><label>Student email</label><input class="input" type="email" name="email" required <?= school_approved($school) ? '' : 'disabled' ?>></div>
-    <button class="btn" <?= school_approved($school) ? '' : 'disabled' ?>>Enrol student</button>
+    <button class="btn" <?= school_approved($school) ? '' : 'disabled' ?>>Enrol / invite</button>
   </form>
 </div>
+
+<?php if ($invites): ?>
+  <div class="card" style="margin-top:18px">
+    <h3>Pending invitations (<?= count($invites) ?>)</h3>
+    <table class="table"><thead><tr><th>Email</th><th>Invited</th><th>Expires</th><th></th></tr></thead><tbody>
+    <?php foreach ($invites as $inv): ?>
+      <tr>
+        <td><?= e($inv['email']) ?></td>
+        <td class="muted"><?= e(date('d M', strtotime((string)$inv['created_at']))) ?></td>
+        <td class="muted"><?= $inv['expires_at'] ? e(date('d M', strtotime((string)$inv['expires_at']))) : '—' ?></td>
+        <td style="white-space:nowrap">
+          <form method="post" style="display:inline"><?= csrf_field() ?><input type="hidden" name="action" value="resend_invite"><input type="hidden" name="invite_id" value="<?= (int)$inv['id'] ?>"><button class="btn btn--sm btn--ghost">Resend</button></form>
+          <form method="post" style="display:inline" onsubmit="return confirm('Revoke this invitation?')"><?= csrf_field() ?><input type="hidden" name="action" value="revoke_invite"><input type="hidden" name="invite_id" value="<?= (int)$inv['id'] ?>"><button class="btn btn--sm btn--danger">Revoke</button></form>
+        </td>
+      </tr>
+    <?php endforeach; ?>
+    </tbody></table>
+  </div>
+<?php endif; ?>
 
 <div class="card" style="margin-top:18px">
   <h3>Students (<?= count($students) ?>)</h3>

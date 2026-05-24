@@ -70,7 +70,8 @@ columns, foreign keys, and indexes on `user_id` / `subject_id` / `topic_id`.
 ```
 public_html/
   index.php  pricing.php  login.php  register.php  register-school.php
-  logout.php  forgot-password.php  reset-password.php  install.php
+  accept-invite.php  logout.php  forgot-password.php  reset-password.php
+  install.php
   logs/     app.log  (not web-accessible)
   config/   config.php  db_config.php  (.htaccess deny)
   inc/      db.php auth.php helpers.php ui.php ai.php progress.php
@@ -146,12 +147,16 @@ a `school_admin` user (active) plus a school record set to **pending**. Platform
 admins approve it from **Admin → Schools** (the owner is notified). Once active,
 the school admin can, from the **school portal**:
 
-- **Teachers** — add existing teacher accounts to the school
-- **Students** — enrol existing student accounts and see their progress
+- **Teachers** — add existing teacher accounts, or email an invitation to people
+  without an account yet (they register straight into the school)
+- **Students** — enrol existing student accounts (or invite by email) and see
+  their progress; pending invitations can be resent or revoked
 - **Analytics** — school-wide average score, activity, weakest topics, top students
 - **Billing** — subscribe the school to a plan (reuses the Billplz flow)
 
-Member management is gated until the school is approved.
+Member management is gated until the school is approved. Invitations are sent by
+email (`accept-invite.php?token=…`), expire after 14 days, and create the
+member's account with the invited role on acceptance.
 
 ## Production hardening (Phase 5)
 
@@ -187,8 +192,9 @@ Member management is gated until the school is approved.
    (Hostinger cron) for parent reports and study reminders.
 8. To enable WhatsApp reminders, set `WHATSAPP_TOKEN` + `WHATSAPP_PHONE_ID`
    (Meta Cloud API). Without them, reminders are in-app only and logged.
-9. Existing databases: run `sql/migrations/phase4.sql`, `phase5.sql`, then
-   `phase6.sql` once (phase6 adds the school portal + `school_admin` role).
+9. Existing databases: run `sql/migrations/phase4.sql`, `phase5.sql`,
+   `phase6.sql` (school portal + `school_admin` role), then `phase7.sql`
+   (school invitations), once each.
 10. To send real emails, set `MAIL_ENABLED=true` and `MAIL_FROM`. Otherwise the
     password-reset link is written to `logs/app.log`.
 11. (Optional) populate a demo environment: `php cron/seed_demo.php`.

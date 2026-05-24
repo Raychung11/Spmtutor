@@ -6,6 +6,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/notifications.php';
+require_once __DIR__ . '/mailer.php';
 
 /** The school owned by a school_admin user, or null. */
 function current_school(int $ownerUserId): ?array
@@ -54,6 +55,115 @@ function add_school_member(int $schoolId, string $email, string $role): array
 function remove_school_member(int $schoolId, int $memberId): void
 {
     db_exec('DELETE FROM school_members WHERE id = ? AND school_id = ?', [$memberId, $schoolId]);
+}
+
+/**
+ * Add the person if they already have a matching account, otherwise email an
+ * invitation so they can register straight into the school.
+ *
+ * @return array [bool ok, string message]
+ */
+function invite_or_add_member(int $schoolId, string $email, string $role, int $invitedBy): array
+{
+    $email = strtolower(trim($email));
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return [false, 'Please enter a valid email address.'];
+    }
+    if (!in_array($role, ['teacher', 'student'], true)) {
+        return [false, 'Invalid member role.'];
+    }
+
+    $user = db_one('SELECT id, role FROM users WHERE email = ?', [$email]);
+    if ($user) {
+        if ($user['role'] !== $role) {
+            return [false, "That email belongs to a {$user['role']} account, so they can't join as a {$role}."];
+        }
+        return add_school_member($schoolId, $email, $role); // existing account → add now
+    }
+
+    // No account yet → create / refresh an invitation and email it.
+    create_invitation($schoolId, $email, $role, $invitedBy);
+    return [true, "Invitation emailed to {$email}."];
+}
+
+function create_invitation(int $schoolId, string $email, string $role, int $invitedBy): string
+{
+    db_exec('DELETE FROM school_invitations WHERE school_id = ? AND email = ? AND status = "pending"', [$schoolId, $email]);
+    $token = bin2hex(random_bytes(32));
+    db_exec(
+        'INSERT INTO school_invitations (school_id, email, member_role, token, invited_by, expires_at)
+         VALUES (?,?,?,?,?, DATE_ADD(NOW(), INTERVAL 14 DAY))',
+        [$schoolId, $email, $role, $token, $invitedBy]
+    );
+    send_invitation_email($schoolId, $email, $role, $token);
+    return $token;
+}
+
+function send_invitation_email(int $schoolId, string $email, string $role, string $token): void
+{
+    $school = db_one('SELECT name FROM schools WHERE id = ?', [$schoolId]);
+    $link   = (APP_URL ?: '') . url('accept-invite.php?token=' . $token);
+    send_email(
+        $email,
+        'You are invited to join ' . ($school['name'] ?? 'a school') . ' on ' . APP_NAME,
+        email_template('School invitation',
+            '<p>You have been invited to join <strong>' . htmlspecialchars($school['name'] ?? '', ENT_QUOTES)
+            . '</strong> as a ' . htmlspecialchars($role, ENT_QUOTES) . ' on ' . htmlspecialchars(APP_NAME, ENT_QUOTES) . '.</p>'
+            . '<p>Click below to create your account and join (valid for 14 days):</p>'
+            . '<p><a href="' . htmlspecialchars($link, ENT_QUOTES) . '">' . htmlspecialchars($link, ENT_QUOTES) . '</a></p>')
+    );
+}
+
+function pending_invitations(int $schoolId): array
+{
+    return db_all(
+        'SELECT * FROM school_invitations WHERE school_id = ? AND status = "pending" ORDER BY id DESC',
+        [$schoolId]
+    );
+}
+
+function revoke_invitation(int $schoolId, int $inviteId): void
+{
+    db_exec('UPDATE school_invitations SET status = "revoked" WHERE id = ? AND school_id = ?', [$inviteId, $schoolId]);
+}
+
+function resend_invitation(int $schoolId, int $inviteId): bool
+{
+    $inv = db_one('SELECT * FROM school_invitations WHERE id = ? AND school_id = ? AND status = "pending"', [$inviteId, $schoolId]);
+    if (!$inv) {
+        return false;
+    }
+    db_exec('UPDATE school_invitations SET expires_at = DATE_ADD(NOW(), INTERVAL 14 DAY) WHERE id = ?', [$inviteId]);
+    send_invitation_email($schoolId, $inv['email'], $inv['member_role'], $inv['token']);
+    return true;
+}
+
+/** Return a valid, unexpired, pending invitation for a token (with school name). */
+function valid_invitation(string $token): ?array
+{
+    if ($token === '') {
+        return null;
+    }
+    return db_one(
+        'SELECT i.*, s.name AS school_name, s.status AS school_status
+         FROM school_invitations i JOIN schools s ON s.id = i.school_id
+         WHERE i.token = ? AND i.status = "pending" AND (i.expires_at IS NULL OR i.expires_at > NOW())',
+        [$token]
+    );
+}
+
+/** Mark an invitation accepted and add the user to the school. */
+function accept_invitation(array $invite, int $userId): void
+{
+    try {
+        db_exec(
+            'INSERT INTO school_members (school_id, user_id, member_role, status) VALUES (?,?,?,?)',
+            [(int) $invite['school_id'], $userId, $invite['member_role'], 'active']
+        );
+    } catch (Throwable $e) {
+        // Already a member — ignore.
+    }
+    db_exec('UPDATE school_invitations SET status = "accepted", accepted_at = NOW() WHERE id = ?', [(int) $invite['id']]);
 }
 
 function school_members(int $schoolId, string $role): array
