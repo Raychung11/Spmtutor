@@ -45,14 +45,14 @@ Native PHP 8 front controllers (public_html/*.php + role folders)
 | 3 | AI Tutor chat | **Built** (sessions, messages, editable prompt, provider + fallback) |
 | 4 | Diagnostic engine | **Built** (subject quiz, auto grading, strong/weak topics, AI recommendation) |
 | 5 | Practice question bank | **Built** (MCQ practice, attempts, options, admin CRUD) |
-| 6 | Snap & Check / AI marking | Schema + upload plumbing (Phase 3) |
+| 6 | Snap & Check / AI marking | **Built** (image/text upload, AI marking → score/mistakes/correction, teacher override) |
 | 7 | Learning path engine | **Built** (auto-generated from diagnostic weak topics, item tracking) |
 | 8 | Progress tracking | **Built** (summary, subject/topic stats, streaks) |
 | 9 | Parent dashboard | **Built** (link child, view progress, weekly AI report) |
-| 10 | Teacher dashboard | **Built** (student overview, review queue) |
+| 10 | Teacher dashboard | **Built** (student overview, AI-marking review + score override + comment) |
 | 11 | Gamification | **Built** (XP, levels, streaks, badges) |
 | 12 | Subscription & payment | **Built** (plans, auto trial, Billplz checkout + callback, invoices) |
-| 13 | Notifications | Schema (Phase 2/4) |
+| 13 | Notifications | **Built** (in-app bell + feed; email/WhatsApp channels integration-ready) |
 | 14 | Admin panel | **Built** (dashboard, users, subjects, topics, skills, questions, AI prompts) |
 | 15 | Landing page CMS | **Built** (editable sections, testimonials, FAQs) |
 
@@ -72,11 +72,14 @@ public_html/
   config/   config.php  db_config.php  (.htaccess deny)
   inc/      db.php auth.php helpers.php ui.php ai.php progress.php
             *_layout.php  (.htaccess deny)
+  notifications.php  (shared, role-aware)
   inc/      ... + diagnostic.php learning.php billing.php reports.php
+            marking.php notifications.php
   admin/    dashboard users subjects topics skills questions ai_prompts landing
-  student/  dashboard tutor diagnostic learning_path practice progress subscription
+  student/  dashboard tutor diagnostic learning_path practice snap_check
+            progress subscription
   parent/   dashboard
-  teacher/  dashboard
+  teacher/  dashboard review
   api/      tutor.php topics.php billplz_callback.php
   cron/     weekly_reports.php  (CLI only)
   uploads/  (no script execution)
@@ -91,8 +94,9 @@ public_html/
   admin panel, landing CMS, pricing, plans + auto trial.
 - **Phase 2 (done):** Diagnostic engine, learning-path generation, parent
   weekly AI reports (on-demand + cron), Billplz checkout + callback + invoices.
-- **Phase 3:** Snap & Check AI marking (OCR + marking prompt), teacher review &
-  override, gamification expansion, in-app notifications.
+- **Phase 3 (done):** Snap & Check AI marking (image/typed answer + marking
+  prompt, JSON-parsed feedback), teacher review & score override, in-app
+  notifications with topbar bell. (OCR provider is integration-ready.)
 - **Phase 4:** School/class management, advanced analytics, WhatsApp reminders,
   mobile app API.
 

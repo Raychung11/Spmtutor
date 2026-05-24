@@ -5,6 +5,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/notifications.php';
 
 function render_head(string $title): void
 {
@@ -56,6 +57,10 @@ function dash_header(string $title, array $user, array $nav, string $panelLabel)
     <header class="topbar">
       <h1 class="topbar__title"><?= e($title) ?></h1>
       <div class="topbar__user">
+        <?php $unread = unread_count((int) $user['id']); ?>
+        <a class="bell" href="<?= url('notifications.php') ?>" title="Notifications">
+          🔔<?php if ($unread): ?><span class="bell__badge"><?= $unread > 9 ? '9+' : $unread ?></span><?php endif; ?>
+        </a>
         <span class="avatar"><?= e(strtoupper(mb_substr($user['name'], 0, 1))) ?></span>
         <span class="topbar__name"><?= e($user['name']) ?></span>
       </div>

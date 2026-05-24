@@ -10,7 +10,9 @@ function student_layout_start(string $title, array $user, string $current): void
         ['label' => 'Diagnostic',    'href' => 'student/diagnostic.php'],
         ['label' => 'Learning Path', 'href' => 'student/learning_path.php'],
         ['label' => 'Practice',      'href' => 'student/practice.php'],
+        ['label' => 'Snap & Check',  'href' => 'student/snap_check.php'],
         ['label' => 'Progress',      'href' => 'student/progress.php'],
+        ['label' => 'Notifications', 'href' => 'notifications.php'],
         ['label' => 'Subscription',  'href' => 'student/subscription.php'],
     ], $current);
     dash_header($title, $user, $nav, 'Student');

@@ -119,6 +119,13 @@ textarea { resize: vertical; min-height: 90px; }
 .topbar__title { font-size: 20px; margin: 0; }
 .topbar__user { display: flex; align-items: center; gap: 10px; }
 .avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--grad); display: grid; place-items: center; font-weight: 700; }
+.bell { position: relative; font-size: 18px; text-decoration: none; }
+.bell:hover { text-decoration: none; }
+.bell__badge { position: absolute; top: -6px; right: -8px; background: var(--bad); color: #fff; font-size: 10px; font-weight: 700; border-radius: 999px; padding: 1px 5px; }
+.notif { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 10px; background: var(--card-2); }
+.notif--unread { border-color: var(--primary); }
+.snap-result dt { color: var(--muted); font-size: 13px; margin-top: 10px; }
+.snap-result dd { margin: 2px 0 0; }
 .page { padding: 26px; }
 
 @media (max-width: 760px) {

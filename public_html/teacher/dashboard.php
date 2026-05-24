@@ -20,7 +20,7 @@ $students = db_all(
 );
 $pendingUploads = db_all(
     'SELECT au.id, u.name, au.created_at FROM answer_uploads au
-     JOIN users u ON u.id = au.user_id WHERE au.status = "uploaded" ORDER BY au.id DESC LIMIT 10'
+     JOIN users u ON u.id = au.user_id WHERE au.status IN ("uploaded","marked") ORDER BY au.id DESC LIMIT 10'
 );
 
 teacher_layout_start('Teacher Dashboard', $user, 'dashboard.php');
@@ -46,6 +46,7 @@ teacher_layout_start('Teacher Dashboard', $user, 'dashboard.php');
 
 <div class="card" style="margin-top:18px">
   <h3>AI marking awaiting review</h3>
+  <p><a class="btn btn--sm" href="<?= url('teacher/review.php') ?>">Open review queue</a></p>
   <?php if ($pendingUploads): ?>
     <table class="table"><tbody>
     <?php foreach ($pendingUploads as $u): ?>
