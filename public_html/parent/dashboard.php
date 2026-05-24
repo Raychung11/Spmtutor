@@ -1,26 +1,48 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/../inc/auth.php';
+require_once __DIR__ . '/../inc/reports.php';
 require_once __DIR__ . '/../inc/parent_layout.php';
 
 $user = require_role('parent');
 $uid  = (int) $user['id'];
 
+/** Confirm the child is linked to this parent before acting on their data. */
+function parent_owns_child(int $parentId, int $childId): bool
+{
+    return (bool) db_one(
+        'SELECT 1 FROM parent_student_links WHERE parent_user_id = ? AND student_user_id = ? AND status = "active"',
+        [$parentId, $childId]
+    );
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
-    $email = strtolower(input('student_email'));
-    $student = db_one("SELECT id, name FROM users WHERE email = ? AND role = 'student'", [$email]);
-    if (!$student) {
-        flash('error', 'No student account found with that email.');
-    } else {
-        try {
-            db_exec(
-                'INSERT INTO parent_student_links (parent_user_id, student_user_id, relationship, status) VALUES (?,?,?,?)',
-                [$uid, $student['id'], input('relationship') ?: 'parent', 'active']
-            );
-            flash('success', 'Linked to ' . $student['name'] . '.');
-        } catch (Throwable $e) {
-            flash('info', 'That student is already linked.');
+    $action = input('action', 'link');
+
+    if ($action === 'report') {
+        $childId = input_int('student_id');
+        if ($childId && parent_owns_child($uid, $childId)) {
+            generate_weekly_report($childId);
+            flash('success', 'Weekly AI report generated.');
+        } else {
+            flash('error', 'Child not found.');
+        }
+    } else { // link
+        $email   = strtolower(input('student_email'));
+        $student = db_one("SELECT id, name FROM users WHERE email = ? AND role = 'student'", [$email]);
+        if (!$student) {
+            flash('error', 'No student account found with that email.');
+        } else {
+            try {
+                db_exec(
+                    'INSERT INTO parent_student_links (parent_user_id, student_user_id, relationship, status) VALUES (?,?,?,?)',
+                    [$uid, $student['id'], input('relationship') ?: 'parent', 'active']
+                );
+                flash('success', 'Linked to ' . $student['name'] . '.');
+            } catch (Throwable $e) {
+                flash('info', 'That student is already linked.');
+            }
         }
     }
     redirect('parent/dashboard.php');
@@ -40,6 +62,7 @@ parent_layout_start('Parent Dashboard', $user, 'dashboard.php');
   <p class="muted">Enter the email your child uses on <?= e(APP_NAME) ?>.</p>
   <form method="post" style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
     <?= csrf_field() ?>
+    <input type="hidden" name="action" value="link">
     <div class="field" style="margin:0;flex:1;min-width:220px"><label>Student email</label><input class="input" type="email" name="student_email" required></div>
     <div class="field" style="margin:0"><label>Relationship</label><input class="input" name="relationship" placeholder="Mother / Father"></div>
     <button class="btn">Link</button>
@@ -77,8 +100,14 @@ parent_layout_start('Parent Dashboard', $user, 'dashboard.php');
     </div>
     <div class="flash flash--info" style="margin-top:14px">
       <strong>Weekly AI report:</strong>
-      <?= $report ? e($report['summary']) . ' ' . e($report['recommendation'] ?? '') : 'Reports generate after a week of activity. (AI Parent Report &mdash; Phase 2/3.)' ?>
+      <?= $report ? nl2br(e($report['summary'])) . '<br><em>' . e($report['recommendation'] ?? '') . '</em>' : 'No report yet. Generate one below.' ?>
     </div>
+    <form method="post">
+      <?= csrf_field() ?>
+      <input type="hidden" name="action" value="report">
+      <input type="hidden" name="student_id" value="<?= $cid ?>">
+      <button class="btn btn--sm btn--ghost">Generate weekly AI report</button>
+    </form>
   </div>
 <?php endforeach; ?>
 

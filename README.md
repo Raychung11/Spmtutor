@@ -43,15 +43,15 @@ Native PHP 8 front controllers (public_html/*.php + role folders)
 | 1 | Auth & user management | **Built** (register/login/logout/forgot, roles, profiles, parent-child link, login logs) |
 | 2 | Subject & skill management | **Built** (levels, subjects, topics, skills admin CRUD) |
 | 3 | AI Tutor chat | **Built** (sessions, messages, editable prompt, provider + fallback) |
-| 4 | Diagnostic engine | Schema + roadmap (Phase 2) |
+| 4 | Diagnostic engine | **Built** (subject quiz, auto grading, strong/weak topics, AI recommendation) |
 | 5 | Practice question bank | **Built** (MCQ practice, attempts, options, admin CRUD) |
 | 6 | Snap & Check / AI marking | Schema + upload plumbing (Phase 3) |
-| 7 | Learning path engine | Schema + daily mission (Phase 2) |
+| 7 | Learning path engine | **Built** (auto-generated from diagnostic weak topics, item tracking) |
 | 8 | Progress tracking | **Built** (summary, subject/topic stats, streaks) |
-| 9 | Parent dashboard | **Built** (link child, view progress, report slot) |
+| 9 | Parent dashboard | **Built** (link child, view progress, weekly AI report) |
 | 10 | Teacher dashboard | **Built** (student overview, review queue) |
 | 11 | Gamification | **Built** (XP, levels, streaks, badges) |
-| 12 | Subscription & payment | **Built** plans + auto free-trial; checkout integration-ready (Phase 2) |
+| 12 | Subscription & payment | **Built** (plans, auto trial, Billplz checkout + callback, invoices) |
 | 13 | Notifications | Schema (Phase 2/4) |
 | 14 | Admin panel | **Built** (dashboard, users, subjects, topics, skills, questions, AI prompts) |
 | 15 | Landing page CMS | **Built** (editable sections, testimonials, FAQs) |
@@ -72,11 +72,13 @@ public_html/
   config/   config.php  db_config.php  (.htaccess deny)
   inc/      db.php auth.php helpers.php ui.php ai.php progress.php
             *_layout.php  (.htaccess deny)
+  inc/      ... + diagnostic.php learning.php billing.php reports.php
   admin/    dashboard users subjects topics skills questions ai_prompts landing
-  student/  dashboard tutor practice progress
+  student/  dashboard tutor diagnostic learning_path practice progress subscription
   parent/   dashboard
   teacher/  dashboard
-  api/      tutor.php topics.php
+  api/      tutor.php topics.php billplz_callback.php
+  cron/     weekly_reports.php  (CLI only)
   uploads/  (no script execution)
   assets/   css/style.css  js/app.js  img/
   sql/      schema.sql  seed.sql  (.htaccess deny)
@@ -87,8 +89,8 @@ public_html/
 - **Phase 1 (this build):** Auth, student dashboard, subject/topic/skill setup,
   AI tutor chat, question bank + practice, progress tracking, gamification,
   admin panel, landing CMS, pricing, plans + auto trial.
-- **Phase 2:** Diagnostic engine, learning-path generation, parent weekly AI
-  reports, Billplz checkout + invoices, email/password-reset delivery.
+- **Phase 2 (done):** Diagnostic engine, learning-path generation, parent
+  weekly AI reports (on-demand + cron), Billplz checkout + callback + invoices.
 - **Phase 3:** Snap & Check AI marking (OCR + marking prompt), teacher review &
   override, gamification expansion, in-app notifications.
 - **Phase 4:** School/class management, advanced analytics, WhatsApp reminders,
@@ -109,6 +111,10 @@ public_html/
 4. Delete `install.php` afterwards (an `install.lock` is also written).
 5. To enable live AI, set env vars `AI_API_KEY` (and optionally `AI_PROVIDER`,
    `AI_MODEL`). Without a key the tutor runs in safe demo mode.
+6. To enable live payments, set `BILLPLZ_API_KEY`, `BILLPLZ_COLLECTION_ID`,
+   `BILLPLZ_X_SIGNATURE`, `APP_URL` (and `BILLPLZ_SANDBOX=false` for production).
+   Without a key, checkout runs in demo mode and activates plans instantly.
+7. Schedule `cron/weekly_reports.php` weekly (Hostinger cron) for parent reports.
 
 ## 8. AI safety
 

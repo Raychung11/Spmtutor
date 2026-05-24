@@ -30,6 +30,20 @@ define('AI_API_KEY', getenv('AI_API_KEY') ?: '');
 define('AI_MODEL', getenv('AI_MODEL') ?: 'claude-sonnet-4-6');
 define('AI_API_BASE', getenv('AI_API_BASE') ?: 'https://api.anthropic.com/v1/messages');
 
+// --- Payments: Billplz (integration-ready) ---
+// When BILLPLZ_API_KEY is empty the app runs checkout in demo mode and
+// activates the subscription immediately without contacting a gateway.
+define('BILLPLZ_API_KEY', getenv('BILLPLZ_API_KEY') ?: '');
+define('BILLPLZ_COLLECTION_ID', getenv('BILLPLZ_COLLECTION_ID') ?: '');
+define('BILLPLZ_X_SIGNATURE', getenv('BILLPLZ_X_SIGNATURE') ?: '');
+define('BILLPLZ_SANDBOX', filter_var(getenv('BILLPLZ_SANDBOX') ?: 'true', FILTER_VALIDATE_BOOL));
+define('BILLPLZ_API_BASE', BILLPLZ_SANDBOX
+    ? 'https://www.billplz-sandbox.com/api/v3'
+    : 'https://www.billplz.com/api/v3');
+
+// Public base URL used for payment callbacks/redirects (e.g. https://app.example.com).
+define('APP_URL', rtrim(getenv('APP_URL') ?: '', '/'));
+
 // --- Error reporting ---
 if (APP_DEBUG) {
     error_reporting(E_ALL);
