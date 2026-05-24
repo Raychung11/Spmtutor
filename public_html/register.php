@@ -84,6 +84,7 @@ render_head('Create account');
       <button class="btn btn--block" type="submit">Create account</button>
     </form>
     <p class="center muted" style="margin-top:16px">Already have an account? <a href="<?= url('login.php') ?>">Log in</a></p>
+    <p class="center muted">Registering a school or learning centre? <a href="<?= url('register-school.php') ?>">School signup</a></p>
   </div>
 </div>
 <script>

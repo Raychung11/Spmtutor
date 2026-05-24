@@ -115,11 +115,12 @@ function require_role(string ...$roles): array
 function dashboard_for(string $role): string
 {
     return match ($role) {
-        'admin'   => 'admin/dashboard.php',
-        'teacher' => 'teacher/dashboard.php',
-        'parent'  => 'parent/dashboard.php',
-        'creator' => 'admin/dashboard.php',
-        default   => 'student/dashboard.php',
+        'admin'        => 'admin/dashboard.php',
+        'teacher'      => 'teacher/dashboard.php',
+        'parent'       => 'parent/dashboard.php',
+        'creator'      => 'admin/dashboard.php',
+        'school_admin' => 'school/dashboard.php',
+        default        => 'student/dashboard.php',
     };
 }
 

@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
   email         VARCHAR(190) NOT NULL UNIQUE,
   phone         VARCHAR(30)  NULL,
   password_hash VARCHAR(255) NOT NULL,
-  role          ENUM('student','parent','teacher','admin','creator') NOT NULL DEFAULT 'student',
+  role          ENUM('student','parent','teacher','admin','creator','school_admin') NOT NULL DEFAULT 'student',
   status        ENUM('active','suspended','pending') NOT NULL DEFAULT 'active',
   remember_token VARCHAR(64) NULL,
   last_login_at DATETIME NULL,
@@ -767,10 +767,26 @@ CREATE TABLE IF NOT EXISTS schools (
   id          INT AUTO_INCREMENT PRIMARY KEY,
   name        VARCHAR(190) NOT NULL,
   type        ENUM('school','learning_center') NOT NULL DEFAULT 'learning_center',
+  owner_user_id INT NULL,
   contact_email VARCHAR(190) NULL,
   phone       VARCHAR(30) NULL,
   status      VARCHAR(20) NOT NULL DEFAULT 'active',
-  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_school_owner (owner_user_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS school_members (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  school_id   INT NOT NULL,
+  user_id     INT NOT NULL,
+  member_role ENUM('teacher','student') NOT NULL,
+  status      VARCHAR(20) NOT NULL DEFAULT 'active',
+  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_school_member (school_id, user_id),
+  INDEX idx_member_school (school_id),
+  INDEX idx_member_user (user_id),
+  CONSTRAINT fk_member_school FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE CASCADE,
+  CONSTRAINT fk_member_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS api_tokens (

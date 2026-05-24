@@ -38,6 +38,7 @@ render_head('Your personal AI tutor');
       <?php if ($user): ?>
         <a class="btn btn--sm" href="<?= url(dashboard_for($user['role'])) ?>">Dashboard</a>
       <?php else: ?>
+        <a href="<?= url('register-school.php') ?>">For schools</a>
         <a href="<?= url('login.php') ?>">Log in</a>
         <a class="btn btn--sm" href="<?= url('register.php') ?>">Start free</a>
       <?php endif; ?>

@@ -53,7 +53,8 @@ Native PHP 8 front controllers (public_html/*.php + role folders)
 | 11 | Gamification | **Built** (XP, levels, streaks, badges) |
 | 12 | Subscription & payment | **Built** (plans, auto trial, Billplz checkout + callback, invoices) |
 | 13 | Notifications | **Built** (in-app bell + feed; email/WhatsApp channels integration-ready) |
-| 10b | School / class management | **Built** (classes, roster, assignments + submissions, schools table) |
+| 10b | School / class management | **Built** (classes, roster, assignments + submissions) |
+| 10c | School portal | **Built** (public signup + admin approval, school_admin role, teachers/students/analytics/billing) |
 | 14 | Admin panel | **Built** (dashboard, analytics, users, subjects, topics, skills, questions, subscriptions, schools, AI prompts) |
 | 15 | Landing page CMS | **Built** (editable sections, testimonials, FAQs) |
 
@@ -68,8 +69,8 @@ columns, foreign keys, and indexes on `user_id` / `subject_id` / `topic_id`.
 
 ```
 public_html/
-  index.php  pricing.php  login.php  register.php  logout.php
-  forgot-password.php  reset-password.php  install.php
+  index.php  pricing.php  login.php  register.php  register-school.php
+  logout.php  forgot-password.php  reset-password.php  install.php
   logs/     app.log  (not web-accessible)
   config/   config.php  db_config.php  (.htaccess deny)
   inc/      db.php auth.php helpers.php ui.php ai.php progress.php
@@ -84,6 +85,7 @@ public_html/
             assignments progress subscription api_tokens
   parent/   dashboard
   teacher/  dashboard classes review
+  school/   dashboard teachers students analytics billing
   api/      tutor.php topics.php billplz_callback.php  openapi.yaml
   api/v1/   index auth logout me subjects progress tutor diagnostic
             learning_path assignments notifications tokens  (mobile REST)
@@ -137,6 +139,20 @@ Send `Authorization: Bearer <token>` on authenticated calls. CORS enabled.
 Full spec: [`/api/openapi.yaml`](public_html/api/openapi.yaml). Students manage
 tokens at **Student → API Access**.
 
+## School portal
+
+Schools / learning centres self-register at `/register-school.php`. This creates
+a `school_admin` user (active) plus a school record set to **pending**. Platform
+admins approve it from **Admin → Schools** (the owner is notified). Once active,
+the school admin can, from the **school portal**:
+
+- **Teachers** — add existing teacher accounts to the school
+- **Students** — enrol existing student accounts and see their progress
+- **Analytics** — school-wide average score, activity, weakest topics, top students
+- **Billing** — subscribe the school to a plan (reuses the Billplz flow)
+
+Member management is gated until the school is approved.
+
 ## Production hardening (Phase 5)
 
 - **Login lockout:** after `LOGIN_MAX_ATTEMPTS` failures from an email/IP within
@@ -171,7 +187,8 @@ tokens at **Student → API Access**.
    (Hostinger cron) for parent reports and study reminders.
 8. To enable WhatsApp reminders, set `WHATSAPP_TOKEN` + `WHATSAPP_PHONE_ID`
    (Meta Cloud API). Without them, reminders are in-app only and logged.
-9. Existing databases: run `sql/migrations/phase4.sql` then `phase5.sql` once.
+9. Existing databases: run `sql/migrations/phase4.sql`, `phase5.sql`, then
+   `phase6.sql` once (phase6 adds the school portal + `school_admin` role).
 10. To send real emails, set `MAIL_ENABLED=true` and `MAIL_FROM`. Otherwise the
     password-reset link is written to `logs/app.log`.
 11. (Optional) populate a demo environment: `php cron/seed_demo.php`.
