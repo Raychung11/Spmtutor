@@ -69,23 +69,27 @@ columns, foreign keys, and indexes on `user_id` / `subject_id` / `topic_id`.
 ```
 public_html/
   index.php  pricing.php  login.php  register.php  logout.php
-  forgot-password.php  install.php
+  forgot-password.php  reset-password.php  install.php
+  logs/     app.log  (not web-accessible)
   config/   config.php  db_config.php  (.htaccess deny)
   inc/      db.php auth.php helpers.php ui.php ai.php progress.php
             *_layout.php  (.htaccess deny)
   notifications.php  (shared, role-aware)
   inc/      ... + diagnostic.php learning.php billing.php reports.php
             marking.php notifications.php classes.php whatsapp.php api.php
+            ratelimit.php mailer.php
   admin/    dashboard analytics users subjects topics skills questions
             ai_prompts landing
   student/  dashboard tutor diagnostic learning_path practice snap_check
-            assignments progress subscription
+            assignments progress subscription api_tokens
   parent/   dashboard
   teacher/  dashboard classes review
-  api/      tutor.php topics.php billplz_callback.php
-  api/v1/   index auth me subjects progress tutor notifications  (mobile REST)
-  cron/     weekly_reports.php reminders.php  (CLI only)
-  sql/migrations/ phase4.sql  (for existing installs)
+  api/      tutor.php topics.php billplz_callback.php  openapi.yaml
+  api/v1/   index auth logout me subjects progress tutor diagnostic
+            learning_path assignments notifications tokens  (mobile REST)
+  cron/     weekly_reports.php reminders.php seed_demo.php  (CLI only)
+  sql/      schema.sql seed.sql content.sql
+  sql/migrations/ phase4.sql phase5.sql  (for existing installs)
   uploads/  (no script execution)
   assets/   css/style.css  js/app.js  img/
   sql/      schema.sql  seed.sql  (.htaccess deny)
@@ -104,6 +108,11 @@ public_html/
 - **Phase 4 (done):** Class & assignment management (+ schools table), advanced
   analytics dashboard, WhatsApp + study-reminder cron, token-based mobile REST
   API (`/api/v1`).
+- **Phase 5 (done):** Production hardening (login lockout, rate limiting, global
+  error logging, email + password-reset), expanded content pack (Add Maths,
+  Physics, Chemistry, Biology), CLI demo-data seeder, and an expanded mobile API
+  (diagnostic, learning path, assignments, tokens, logout) with an OpenAPI spec
+  and a student token-management screen.
 
 ## Mobile API (`/api/v1`)
 
@@ -118,8 +127,27 @@ stored hashed (`api_tokens`).
 | GET  | `/api/v1/progress.php` | Summary + subject/topic stats |
 | POST | `/api/v1/tutor.php` | Ask the AI tutor `{message,subject_id?,session_id?}` |
 | GET/POST | `/api/v1/notifications.php` | List / mark-all-read |
+| POST | `/api/v1/logout.php` | Revoke the current token |
+| GET/POST | `/api/v1/diagnostic.php` | Questions/attempts; submit a diagnostic |
+| GET/POST | `/api/v1/learning_path.php` | Active paths; update item status |
+| GET/POST | `/api/v1/assignments.php` | List / submit assignments |
+| GET/POST | `/api/v1/tokens.php` | List / revoke tokens |
 
 Send `Authorization: Bearer <token>` on authenticated calls. CORS enabled.
+Full spec: [`/api/openapi.yaml`](public_html/api/openapi.yaml). Students manage
+tokens at **Student → API Access**.
+
+## Production hardening (Phase 5)
+
+- **Login lockout:** after `LOGIN_MAX_ATTEMPTS` failures from an email/IP within
+  `LOGIN_LOCKOUT_MINUTES`, further attempts are blocked.
+- **Rate limiting:** `rate_limit()` (table-backed) caps AI tutor calls per user.
+- **Error logging:** uncaught exceptions/fatals are logged to `logs/app.log`;
+  users see a generic message (no stack traces) unless `APP_DEBUG`.
+- **Email:** `send_email()` (PHP mail, gated by `MAIL_ENABLED`) powers the
+  password-reset flow (`forgot-password.php` → `reset-password.php`).
+- **Demo data:** `php cron/seed_demo.php` populates students, attempts,
+  subscriptions, a class, assignments, a Snap & Check marking and parent reports.
 
 ## 6. MVP feature priority
 
@@ -143,7 +171,10 @@ Send `Authorization: Bearer <token>` on authenticated calls. CORS enabled.
    (Hostinger cron) for parent reports and study reminders.
 8. To enable WhatsApp reminders, set `WHATSAPP_TOKEN` + `WHATSAPP_PHONE_ID`
    (Meta Cloud API). Without them, reminders are in-app only and logged.
-9. Existing pre-Phase-4 databases: run `sql/migrations/phase4.sql` once.
+9. Existing databases: run `sql/migrations/phase4.sql` then `phase5.sql` once.
+10. To send real emails, set `MAIL_ENABLED=true` and `MAIL_FROM`. Otherwise the
+    password-reset link is written to `logs/app.log`.
+11. (Optional) populate a demo environment: `php cron/seed_demo.php`.
 
 ## 8. AI safety
 

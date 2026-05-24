@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../inc/auth.php';
 require_once __DIR__ . '/../inc/ai.php';
+require_once __DIR__ . '/../inc/ratelimit.php';
 
 header('Content-Type: application/json');
 
@@ -17,6 +18,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 csrf_check();
+
+if (!rate_limit('ai_tutor:' . (int) $user['id'], 20, 60)) {
+    http_response_code(429);
+    echo json_encode(['error' => 'You are sending messages too fast. Please wait a moment.']);
+    exit;
+}
 
 $uid       = (int) $user['id'];
 $message   = trim((string) ($_POST['message'] ?? ''));

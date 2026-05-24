@@ -33,6 +33,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$installed) {
             $messages[] = 'Schema created.';
             $pdo->exec(file_get_contents(__DIR__ . '/sql/seed.sql'));
             $messages[] = 'Seed data inserted.';
+            $pdo->exec(file_get_contents(__DIR__ . '/sql/content.sql'));
+            $messages[] = 'Content pack inserted.';
 
             // Create / update the admin account with a real password hash.
             $hash = password_hash($adminPass, PASSWORD_BCRYPT);

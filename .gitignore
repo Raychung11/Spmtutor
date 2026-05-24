@@ -6,6 +6,11 @@ public_html/uploads/*
 !public_html/uploads/.gitkeep
 !public_html/uploads/.htaccess
 
+# App logs (keep the folder, ignore contents)
+public_html/logs/*
+!public_html/logs/.gitkeep
+!public_html/logs/.htaccess
+
 # Logs / OS / editor
 *.log
 .DS_Store

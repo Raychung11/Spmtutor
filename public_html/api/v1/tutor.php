@@ -2,11 +2,16 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../../inc/api.php';
 require_once __DIR__ . '/../../inc/ai.php';
+require_once __DIR__ . '/../../inc/ratelimit.php';
 
 api_boot();
 api_require_method('POST');
 $user = api_user();
 $uid  = (int) $user['id'];
+
+if (!rate_limit('ai_tutor:' . $uid, 20, 60)) {
+    api_error('Rate limit exceeded. Please slow down.', 429);
+}
 
 $body      = api_body();
 $message   = trim((string) ($body['message'] ?? ''));

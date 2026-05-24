@@ -6,6 +6,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers.php';
+require_once __DIR__ . '/ratelimit.php';
 
 function current_user(): ?array
 {
@@ -30,8 +31,25 @@ function is_logged_in(): bool
     return current_user() !== null;
 }
 
+/** True while the email/IP is locked out due to repeated failures. */
+function login_locked(string $email): bool
+{
+    $cutoff = date('Y-m-d H:i:s', strtotime('-' . LOGIN_LOCKOUT_MINUTES . ' minutes'));
+    $fails  = (int) (db_one(
+        'SELECT COUNT(*) c FROM login_logs
+         WHERE result = "failed" AND created_at >= ? AND (email = ? OR ip_address = ?)',
+        [$cutoff, $email, $_SERVER['REMOTE_ADDR'] ?? '']
+    )['c'] ?? 0);
+    return $fails >= LOGIN_MAX_ATTEMPTS;
+}
+
 function attempt_login(string $email, string $password): bool
 {
+    if (login_locked($email)) {
+        flash('error', 'Too many failed attempts. Please try again in ' . LOGIN_LOCKOUT_MINUTES . ' minutes.');
+        return false;
+    }
+
     $user = db_one('SELECT * FROM users WHERE email = ?', [$email]);
     $ok   = $user && password_verify($password, $user['password_hash']);
 

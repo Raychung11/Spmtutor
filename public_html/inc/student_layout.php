@@ -15,6 +15,7 @@ function student_layout_start(string $title, array $user, string $current): void
         ['label' => 'Progress',      'href' => 'student/progress.php'],
         ['label' => 'Notifications', 'href' => 'notifications.php'],
         ['label' => 'Subscription',  'href' => 'student/subscription.php'],
+        ['label' => 'API Access',    'href' => 'student/api_tokens.php'],
     ], $current);
     dash_header($title, $user, $nav, 'Student');
 }
