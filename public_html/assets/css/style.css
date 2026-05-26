@@ -158,6 +158,42 @@ textarea { resize: vertical; min-height: 90px; }
 footer.site { border-top: 1px solid var(--border); padding: 30px 0; color: var(--muted); text-align: center; margin-top: 40px; }
 @media (max-width: 760px) { .hero h1 { font-size: 32px; } .nav__links a:not(.btn) { display: none; } }
 
+/* ---------- Marketing landing ---------- */
+.lnav { position: sticky; top: 0; z-index: 50; background: rgba(15,11,30,.82); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+.lnav__inner { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; }
+.lnav__links { display: flex; align-items: center; gap: 18px; }
+.lnav__links a { color: var(--muted); font-size: 14px; }
+.lnav__links a:hover { color: var(--text); text-decoration: none; }
+@media (max-width: 860px) { .lnav__links a:not(.btn) { display: none; } }
+
+.lhero { padding: 56px 0 30px; }
+.lhero__grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 40px; align-items: center; }
+.lhero__copy h1 { font-size: 48px; margin: 14px 0 16px; }
+.lhero__copy p { font-size: 19px; color: var(--muted); margin: 0 0 24px; max-width: 540px; }
+.lhero__cta { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.pill { display: inline-block; padding: 6px 14px; border-radius: 999px; background: var(--card-2); border: 1px solid var(--border); font-size: 12px; letter-spacing: .04em; color: var(--accent); }
+@media (max-width: 860px) { .lhero__grid { grid-template-columns: 1fr; } .lhero__art { order: -1; } .lhero__copy h1 { font-size: 34px; } }
+
+.chatcard { background: linear-gradient(180deg, var(--card-2), var(--card)); border: 1px solid var(--border); border-radius: 20px; padding: 18px; box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 10px; }
+.chatcard__head { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.chatcard__head .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--border); display: inline-block; }
+.chatcard .msg { max-width: 88%; }
+
+.section--alt { background: var(--bg-2); }
+.stepnum { width: 38px; height: 38px; border-radius: 50%; background: var(--grad); color: #fff; display: grid; place-items: center; font-weight: 800; margin-bottom: 10px; }
+.ticks { list-style: none; padding: 0; margin: 18px 0 24px; }
+.ticks li { padding: 8px 0 8px 30px; position: relative; }
+.ticks li::before { content: "✓"; position: absolute; left: 0; color: var(--good); font-weight: 800; }
+.band { background: var(--grad); }
+.band h2, .band .lead { color: #fff; }
+.band .lead { opacity: .92; }
+.band .btn { background: #fff; color: var(--primary-2); }
+
+.lfooter { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 24px; text-align: left; }
+.lfooter strong { display: block; color: var(--text); margin-bottom: 10px; }
+.lfooter a { display: block; color: var(--muted); padding: 4px 0; font-size: 14px; }
+@media (max-width: 760px) { .lfooter { grid-template-columns: 1fr; } }
+
 /* ---------- AI Tutor chat ---------- */
 .chat { display: flex; flex-direction: column; height: calc(100vh - 200px); min-height: 420px; }
 .chat__log { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 14px; }
