@@ -830,4 +830,19 @@ CREATE TABLE IF NOT EXISTS rate_limits (
   UNIQUE KEY uq_rl_key (rl_key)
 ) ENGINE=InnoDB;
 
+-- =====================================================================
+-- Landing page leads / contact form
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS leads (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  name        VARCHAR(150) NOT NULL,
+  email       VARCHAR(190) NOT NULL,
+  phone       VARCHAR(30) NULL,
+  message     TEXT NULL,
+  source      VARCHAR(60) NULL,
+  status      ENUM('new','contacted','closed') NOT NULL DEFAULT 'new',
+  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_leads_status (status)
+) ENGINE=InnoDB;
+
 SET FOREIGN_KEY_CHECKS = 1;

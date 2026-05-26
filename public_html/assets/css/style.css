@@ -178,6 +178,7 @@ footer.site { border-top: 1px solid var(--border); padding: 30px 0; color: var(-
 .chatcard__head { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
 .chatcard__head .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--border); display: inline-block; }
 .chatcard .msg { max-width: 88%; }
+.lhero__img { width: 100%; border-radius: 20px; border: 1px solid var(--border); box-shadow: var(--shadow); display: block; }
 
 .section--alt { background: var(--bg-2); }
 .stepnum { width: 38px; height: 38px; border-radius: 50%; background: var(--grad); color: #fff; display: grid; place-items: center; font-weight: 800; margin-bottom: 10px; }

@@ -50,6 +50,7 @@ render_head('Your personal AI tutor');
       <a href="#subjects">Subjects</a>
       <a href="#parents">For parents</a>
       <a href="<?= url('pricing.php') ?>">Pricing</a>
+      <a href="#contact">Contact</a>
       <?php if ($user): ?>
         <a class="btn btn--sm" href="<?= url(dashboard_for($user['role'])) ?>">Go to dashboard</a>
       <?php else: ?>
@@ -73,14 +74,18 @@ render_head('Your personal AI tutor');
       </div>
       <p class="muted" style="font-size:13px">No credit card needed. Cancel anytime.</p>
     </div>
-    <div class="lhero__art" aria-hidden="true">
-      <div class="chatcard">
-        <div class="chatcard__head"><span class="dot"></span><span class="dot"></span><span class="dot"></span> AI Tutor</div>
-        <div class="msg msg--user">How do I solve 2x + 3 = 11?</div>
-        <div class="msg msg--assistant">Great question! First subtract 3 from both sides → 2x = 8. Now divide by 2. What do you get? 😊</div>
-        <div class="msg msg--user">x = 4!</div>
-        <div class="msg msg--assistant">Exactly — well done! +10 XP 🔥</div>
-      </div>
+    <div class="lhero__art">
+      <?php if (!empty($hero['image_path'])): ?>
+        <img class="lhero__img" src="<?= url($hero['image_path']) ?>" alt="<?= e(APP_NAME) ?> app screenshot">
+      <?php else: ?>
+        <div class="chatcard" aria-hidden="true">
+          <div class="chatcard__head"><span class="dot"></span><span class="dot"></span><span class="dot"></span> AI Tutor</div>
+          <div class="msg msg--user">How do I solve 2x + 3 = 11?</div>
+          <div class="msg msg--assistant">Great question! First subtract 3 from both sides → 2x = 8. Now divide by 2. What do you get? 😊</div>
+          <div class="msg msg--user">x = 4!</div>
+          <div class="msg msg--assistant">Exactly — well done! +10 XP 🔥</div>
+        </div>
+      <?php endif; ?>
     </div>
   </div>
 </section>
@@ -211,6 +216,28 @@ render_head('Your personal AI tutor');
       <h2><?= e($cta['title'] ?? 'Ready to start learning smarter?') ?></h2>
       <p class="lead"><?= e($cta['subtitle'] ?? 'Create your free account in under a minute.') ?></p>
       <a class="btn" href="<?= url('register.php') ?>">Create your free account</a>
+    </div>
+  </div>
+</section>
+
+<section class="section section--alt" id="contact">
+  <div class="container lhero__grid">
+    <div>
+      <h2 style="text-align:left">Talk to us</h2>
+      <p class="muted" style="font-size:18px">Questions about plans, schools, or getting started? Send us a message and we'll get back to you.</p>
+      <p class="muted">Or email <a href="mailto:<?= e(db_one("SELECT setting_value FROM site_settings WHERE setting_key='support_email'")['setting_value'] ?? 'support@skilltutor.ai') ?>"><?= e(db_one("SELECT setting_value FROM site_settings WHERE setting_key='support_email'")['setting_value'] ?? 'support@skilltutor.ai') ?></a>.</p>
+    </div>
+    <div class="card">
+      <?php render_flashes(); ?>
+      <form method="post" action="<?= url('contact.php') ?>">
+        <?= csrf_field() ?>
+        <div class="field"><label>Name</label><input class="input" name="name" required></div>
+        <div class="field"><label>Email</label><input class="input" type="email" name="email" required></div>
+        <div class="field"><label>Phone (optional)</label><input class="input" name="phone"></div>
+        <div class="field"><label>Message</label><textarea name="message" placeholder="How can we help?"></textarea></div>
+        <div style="position:absolute;left:-9999px" aria-hidden="true"><label>Website</label><input name="website" tabindex="-1" autocomplete="off"></div>
+        <button class="btn btn--block" type="submit">Send message</button>
+      </form>
     </div>
   </div>
 </section>
