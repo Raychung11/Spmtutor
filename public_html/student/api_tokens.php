@@ -33,7 +33,7 @@ student_layout_start('API Access', $user, 'api_tokens.php');
 ?>
 <div class="card">
   <h2>Mobile API access</h2>
-  <p class="muted">Create a personal token to use the SkillTutor AI mobile API. Send it as <code>Authorization: Bearer &lt;token&gt;</code>. See <a href="<?= url('api/openapi.yaml') ?>">the API spec</a>.</p>
+  <p class="muted">Create a personal token to use the LulusAI mobile API. Send it as <code>Authorization: Bearer &lt;token&gt;</code>. See <a href="<?= url('api/openapi.yaml') ?>">the API spec</a>.</p>
   <?php if ($newToken): ?>
     <div class="flash flash--success">
       <strong>Your new token (shown once):</strong>

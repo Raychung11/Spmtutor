@@ -1,9 +1,9 @@
 openapi: 3.0.3
 info:
-  title: SkillTutor AI Mobile API
+  title: LulusAI Mobile API
   version: "1.0"
   description: >
-    Bearer-token REST API for the SkillTutor AI mobile app. Obtain a token via
+    Bearer-token REST API for the LulusAI mobile app. Obtain a token via
     /auth, then send `Authorization: Bearer <token>` on all other calls.
 servers:
   - url: /api/v1

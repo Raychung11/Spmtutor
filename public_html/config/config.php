@@ -10,7 +10,7 @@ if (!defined('APP_ROOT')) {
 }
 
 // --- App ---
-define('APP_NAME', getenv('APP_NAME') ?: 'SkillTutor AI');
+define('APP_NAME', getenv('APP_NAME') ?: 'LulusAI');
 define('APP_ENV', getenv('APP_ENV') ?: 'production'); // 'production' | 'local'
 define('APP_DEBUG', filter_var(getenv('APP_DEBUG') ?: 'false', FILTER_VALIDATE_BOOL));
 
@@ -42,7 +42,7 @@ define('BILLPLZ_API_BASE', BILLPLZ_SANDBOX
     : 'https://www.billplz.com/api/v3');
 
 // Public base URL used for payment callbacks/redirects (e.g. https://app.example.com).
-define('APP_URL', rtrim(getenv('APP_URL') ?: '', '/'));
+define('APP_URL', rtrim(getenv('APP_URL') ?: 'https://lulusai.my', '/'));
 
 // --- WhatsApp reminders (integration-ready, Meta Cloud API) ---
 // When WHATSAPP_TOKEN is empty, reminders are logged instead of sent.
@@ -56,7 +56,7 @@ define('API_TOKEN_TTL_DAYS', (int) (getenv('API_TOKEN_TTL_DAYS') ?: 30));
 // --- Email (integration-ready) ---
 // When MAIL_ENABLED is false, emails are logged instead of sent.
 define('MAIL_ENABLED', filter_var(getenv('MAIL_ENABLED') ?: 'false', FILTER_VALIDATE_BOOL));
-define('MAIL_FROM', getenv('MAIL_FROM') ?: 'no-reply@skilltutor.ai');
+define('MAIL_FROM', getenv('MAIL_FROM') ?: 'hello@lulusai.my');
 define('MAIL_FROM_NAME', getenv('MAIL_FROM_NAME') ?: APP_NAME);
 
 // --- Security ---

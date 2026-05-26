@@ -1,4 +1,4 @@
-# SkillTutor AI — Education OS
+# LulusAI — Education OS
 
 > "Not just an app. Your personal AI tutor."
 

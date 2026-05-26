@@ -21,7 +21,7 @@ student_layout_start('AI Tutor', $user, 'tutor.php');
             <option value="<?= (int)$s['id'] ?>"><?= e($s['name']) ?></option>
           <?php endforeach; ?>
         </select>
-        <span class="muted" style="font-size:13px">SkillTutor explains step-by-step.</span>
+        <span class="muted" style="font-size:13px">LulusAI explains step-by-step.</span>
       </div>
       <div id="chatLog" class="chat__log">
         <div class="msg msg--assistant">Hi <?= e($user['name']) ?>! I'm your AI tutor. Pick a subject and ask me anything &mdash; I'll guide you step by step. 😊</div>

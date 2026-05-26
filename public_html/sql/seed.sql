@@ -1,6 +1,6 @@
 -- =====================================================================
--- SkillTutor AI -- Seed data
--- Default admin password is "Admin@123" (bcrypt hash below). CHANGE IT.
+-- LulusAI -- Seed data
+-- The admin account is created by install.php with a freshly hashed password.
 -- =====================================================================
 SET NAMES utf8mb4;
 
@@ -71,7 +71,7 @@ ON DUPLICATE KEY UPDATE name = VALUES(name);
 
 -- AI prompt templates
 INSERT INTO ai_prompt_templates (code, name, system_prompt, temperature) VALUES
-('tutor', 'AI Tutor', 'You are SkillTutor AI, a friendly, encouraging Malaysian exam tutor. Teach step-by-step using simple language. Never just give the final answer without explaining the method. Adapt to the student education level and subject provided. You may answer in Bahasa Melayu or English to match the student. Ask short follow-up diagnostic questions when helpful. Admit uncertainty rather than giving false certainty. Do not predict exam outcomes. Keep students motivated.', 0.40),
+('tutor', 'AI Tutor', 'You are LulusAI, a friendly, encouraging Malaysian exam tutor. Teach step-by-step using simple language. Never just give the final answer without explaining the method. Adapt to the student education level and subject provided. You may answer in Bahasa Melayu or English to match the student. Ask short follow-up diagnostic questions when helpful. Admit uncertainty rather than giving false certainty. Do not predict exam outcomes. Keep students motivated.', 0.40),
 ('diagnostic', 'AI Diagnostic', 'You generate and interpret diagnostic quizzes mapped to syllabus topics and skills. Identify strong and weak topics from the student answers and produce a clear, encouraging summary with a prioritised practice plan.', 0.30),
 ('marking', 'AI Marking', 'You mark a student answer against the marking scheme. Return: score, correct parts, mistakes, suggested correction, the topic weakness, and a recommended next question. Be fair, specific, and encouraging. State a confidence level and never claim certainty you do not have.', 0.20),
 ('parent_report', 'AI Parent Report', 'You write a short, warm weekly progress report for a parent about their child. Mention improvements, remaining weak areas, and one concrete recommended action. Keep it positive and practical.', 0.50),
@@ -90,10 +90,10 @@ ON DUPLICATE KEY UPDATE name = VALUES(name);
 
 -- Landing sections
 INSERT INTO landing_sections (section_key, title, subtitle, body, sort_order) VALUES
-('hero', 'Not just an app. Your personal AI tutor.', 'SkillTutor AI helps students learn, practise, diagnose weaknesses and improve with AI guidance.', 'Start your 14-day free trial today.', 1),
+('hero', 'Not just an app. Your personal AI tutor.', 'LulusAI helps students learn, practise, diagnose weaknesses and improve with AI guidance.', 'Start your 14-day free trial today.', 1),
 ('features', 'Everything your child needs to improve', 'An AI Skill Education Operating System', 'AI Tutor Chat|Skill Diagnostic|Personalised Learning Path|Practice Questions|Snap & Check marking|Progress Analytics|Parent Dashboard', 2),
 ('parents', 'Built for parents too', 'See real progress, not just screen time', 'Weekly AI reports, weak-area alerts, and recommended action plans keep you in the loop.', 3),
-('cta', 'Ready to start learning smarter?', 'Join thousands of students improving with SkillTutor AI', 'Create your free account in under a minute.', 4)
+('cta', 'Ready to start learning smarter?', 'Join thousands of students improving with LulusAI', 'Create your free account in under a minute.', 4)
 ON DUPLICATE KEY UPDATE title = VALUES(title);
 
 INSERT INTO testimonials (name, role, quote, sort_order) VALUES
@@ -109,7 +109,7 @@ INSERT INTO faqs (question, answer, sort_order) VALUES
 ON DUPLICATE KEY UPDATE answer = VALUES(answer);
 
 INSERT INTO site_settings (setting_key, setting_value) VALUES
-('site_name', 'SkillTutor AI'),
+('site_name', 'LulusAI'),
 ('tagline', 'Not just an app. Your personal AI tutor.'),
-('support_email', 'support@skilltutor.ai')
+('support_email', 'hello@lulusai.my')
 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value);

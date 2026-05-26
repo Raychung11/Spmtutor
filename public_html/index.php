@@ -108,7 +108,7 @@ render_head('Your personal AI tutor');
     <p class="lead"><?= e($features['subtitle'] ?? 'An AI Skill Education Operating System') ?></p>
     <div class="grid grid--3">
       <?php foreach ($featureItems as $f): ?>
-        <div class="card feature"><h3><?= e($f) ?></h3><p class="muted">Built into SkillTutor AI.</p></div>
+        <div class="card feature"><h3><?= e($f) ?></h3><p class="muted">Built into LulusAI.</p></div>
       <?php endforeach; ?>
     </div>
   </div>
@@ -225,7 +225,7 @@ render_head('Your personal AI tutor');
     <div>
       <h2 style="text-align:left">Talk to us</h2>
       <p class="muted" style="font-size:18px">Questions about plans, schools, or getting started? Send us a message and we'll get back to you.</p>
-      <p class="muted">Or email <a href="mailto:<?= e(db_one("SELECT setting_value FROM site_settings WHERE setting_key='support_email'")['setting_value'] ?? 'support@skilltutor.ai') ?>"><?= e(db_one("SELECT setting_value FROM site_settings WHERE setting_key='support_email'")['setting_value'] ?? 'support@skilltutor.ai') ?></a>.</p>
+      <p class="muted">Or email <a href="mailto:<?= e(db_one("SELECT setting_value FROM site_settings WHERE setting_key='support_email'")['setting_value'] ?? 'hello@lulusai.my') ?>"><?= e(db_one("SELECT setting_value FROM site_settings WHERE setting_key='support_email'")['setting_value'] ?? 'hello@lulusai.my') ?></a>.</p>
     </div>
     <div class="card">
       <?php render_flashes(); ?>

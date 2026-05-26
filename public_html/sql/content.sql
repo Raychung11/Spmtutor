@@ -1,5 +1,5 @@
 -- =====================================================================
--- SkillTutor AI -- Expanded content pack (topics, skills, MCQs).
+-- LulusAI -- Expanded content pack (topics, skills, MCQs).
 -- Run once after seed.sql (install.php does this automatically).
 -- References subjects/topics by slug so it is order-independent.
 -- =====================================================================

@@ -41,7 +41,7 @@ $spm = db_one("SELECT id FROM education_levels WHERE slug = 'spm'")['id'] ?? nul
 $studentIds = [];
 
 foreach ($names as $i => $name) {
-    $email = 'student' . ($i + 1) . '@demo.skilltutor.ai';
+    $email = 'student' . ($i + 1) . '@demo.lulusai.my';
     $existing = db_one('SELECT id FROM users WHERE email = ?', [$email]);
     if ($existing) {
         $uid = (int) $existing['id'];
@@ -92,7 +92,7 @@ if ($monthly) {
 }
 
 // Parent linked to the first two students.
-$parentEmail = 'parent@demo.skilltutor.ai';
+$parentEmail = 'parent@demo.lulusai.my';
 $parent = db_one('SELECT id FROM users WHERE email = ?', [$parentEmail]);
 $parentId = $parent ? (int) $parent['id'] : register_user('Parent Demo', $parentEmail, $pw, 'parent');
 foreach (array_slice($studentIds, 0, 2) as $uid) {
@@ -101,7 +101,7 @@ foreach (array_slice($studentIds, 0, 2) as $uid) {
 }
 
 // Teacher + class + assignment.
-$teacherEmail = 'teacher@demo.skilltutor.ai';
+$teacherEmail = 'teacher@demo.lulusai.my';
 $teacher = db_one('SELECT id FROM users WHERE email = ?', [$teacherEmail]);
 $teacherId = $teacher ? (int) $teacher['id'] : register_user('Teacher Demo', $teacherEmail, $pw, 'teacher');
 $mathId = db_one("SELECT id FROM subjects WHERE slug = 'mathematics'")['id'] ?? null;
@@ -124,4 +124,4 @@ db_exec(
 );
 
 echo 'Demo data seeded: ' . count($studentIds) . " students, 1 parent, 1 teacher, 1 class.\n";
-echo "Logins — students: student1@demo.skilltutor.ai .. student6@... | parent@demo... | teacher@demo... (password: {$pw})\n";
+echo "Logins — students: student1@demo.lulusai.my .. student6@... | parent@demo... | teacher@demo... (password: {$pw})\n";

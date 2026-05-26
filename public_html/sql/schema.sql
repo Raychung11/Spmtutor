@@ -1,5 +1,5 @@
 -- =====================================================================
--- SkillTutor AI  -- Education OS
+-- LulusAI -- Education OS
 -- Full MySQL schema (all phases). Engine: InnoDB, charset utf8mb4.
 -- =====================================================================
 SET NAMES utf8mb4;
