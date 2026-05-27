@@ -9,6 +9,49 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
 
+/** Read a site setting (cached), falling back to a default. */
+function setting_get(string $key, ?string $default = null): ?string
+{
+    static $cache = [];
+    if (array_key_exists($key, $cache)) {
+        return $cache[$key] ?? $default;
+    }
+    $row = db_one('SELECT setting_value FROM site_settings WHERE setting_key = ?', [$key]);
+    $cache[$key] = $row['setting_value'] ?? null;
+    return $cache[$key] ?? $default;
+}
+
+/** Upsert a site setting. */
+function setting_set(string $key, string $value): void
+{
+    db_exec(
+        'INSERT INTO site_settings (setting_key, setting_value) VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)',
+        [$key, $value]
+    );
+}
+
+/**
+ * Resolve the active AI configuration. DB settings (Admin → AI Settings) take
+ * precedence over environment constants, so shared-hosting users can configure
+ * the key without server env access.
+ */
+function ai_cfg(): array
+{
+    return [
+        'provider' => setting_get('ai_provider', AI_PROVIDER) ?: AI_PROVIDER,
+        'key'      => setting_get('ai_api_key', AI_API_KEY) ?: AI_API_KEY,
+        'model'    => setting_get('ai_model', AI_MODEL) ?: AI_MODEL,
+        'base'     => setting_get('ai_api_base', '') ?: '',
+    ];
+}
+
+/** Whether live AI is configured (vs. offline demo mode). */
+function ai_enabled(): bool
+{
+    return ai_cfg()['key'] !== '';
+}
+
 /** Load an editable system prompt by template code. */
 function ai_prompt(string $code): array
 {
@@ -29,14 +72,16 @@ function ai_prompt(string $code): array
  */
 function ai_chat(string $systemPrompt, array $messages, float $temperature = 0.4, ?string $model = null): string
 {
-    if (AI_API_KEY === '') {
+    $cfg = ai_cfg();
+    if ($cfg['key'] === '') {
         return ai_fallback($messages);
     }
+    $model = $model ?: $cfg['model'];
 
     try {
-        return AI_PROVIDER === 'openai'
-            ? ai_call_openai($systemPrompt, $messages, $temperature, $model)
-            : ai_call_anthropic($systemPrompt, $messages, $temperature, $model);
+        return $cfg['provider'] === 'openai'
+            ? ai_call_openai($systemPrompt, $messages, $temperature, $model, $cfg['key'], $cfg['base'])
+            : ai_call_anthropic($systemPrompt, $messages, $temperature, $model, $cfg['key'], $cfg['base']);
     } catch (Throwable $e) {
         if (APP_DEBUG) {
             return 'AI error: ' . $e->getMessage();
@@ -45,7 +90,7 @@ function ai_chat(string $systemPrompt, array $messages, float $temperature = 0.4
     }
 }
 
-function ai_call_anthropic(string $system, array $messages, float $temp, ?string $model): string
+function ai_call_anthropic(string $system, array $messages, float $temp, ?string $model, string $key, string $base): string
 {
     $payload = [
         'model'      => $model ?: AI_MODEL,
@@ -57,8 +102,8 @@ function ai_call_anthropic(string $system, array $messages, float $temp, ?string
             'content' => $m['content'],
         ], $messages),
     ];
-    $resp = ai_http(AI_API_BASE, $payload, [
-        'x-api-key: ' . AI_API_KEY,
+    $resp = ai_http($base ?: 'https://api.anthropic.com/v1/messages', $payload, [
+        'x-api-key: ' . $key,
         'anthropic-version: 2023-06-01',
         'content-type: application/json',
     ]);
@@ -66,7 +111,7 @@ function ai_call_anthropic(string $system, array $messages, float $temp, ?string
     return $data['content'][0]['text'] ?? '(no response)';
 }
 
-function ai_call_openai(string $system, array $messages, float $temp, ?string $model): string
+function ai_call_openai(string $system, array $messages, float $temp, ?string $model, string $key, string $base): string
 {
     $msgs = array_merge(
         [['role' => 'system', 'content' => $system]],
@@ -77,9 +122,8 @@ function ai_call_openai(string $system, array $messages, float $temp, ?string $m
         'temperature' => $temp,
         'messages'    => $msgs,
     ];
-    $base = AI_API_BASE ?: 'https://api.openai.com/v1/chat/completions';
-    $resp = ai_http($base, $payload, [
-        'Authorization: Bearer ' . AI_API_KEY,
+    $resp = ai_http($base ?: 'https://api.openai.com/v1/chat/completions', $payload, [
+        'Authorization: Bearer ' . $key,
         'content-type: application/json',
     ]);
     $data = json_decode($resp, true);

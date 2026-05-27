@@ -55,7 +55,7 @@ Native PHP 8 front controllers (public_html/*.php + role folders)
 | 13 | Notifications | **Built** (in-app bell + feed; email/WhatsApp channels integration-ready) |
 | 10b | School / class management | **Built** (classes, roster, assignments + submissions) |
 | 10c | School portal | **Built** (public signup + admin approval, school_admin role, teachers/students/analytics/billing) |
-| 14 | Admin panel | **Built** (dashboard, analytics, users, subjects, topics, skills, questions, subscriptions, schools, AI prompts) |
+| 14 | Admin panel | **Built** (dashboard, analytics, users, subjects, topics, skills, questions, subscriptions, schools, leads, AI settings, AI prompts) |
 | 15 | Landing page CMS | **Built** (editable sections + images/screenshots, testimonials, FAQs, contact/lead capture + admin inbox) |
 
 ## 3. Database
@@ -183,8 +183,10 @@ member's account with the invited role on acceptance.
 2. Point your domain/document root at `public_html/`.
 3. Visit `/install.php`, set the admin email + password, run it.
 4. Delete `install.php` afterwards (an `install.lock` is also written).
-5. To enable live AI, set env vars `AI_API_KEY` (and optionally `AI_PROVIDER`,
-   `AI_MODEL`). Without a key the tutor runs in safe demo mode.
+5. To enable live AI, either set env vars `AI_API_KEY` (and optionally
+   `AI_PROVIDER`, `AI_MODEL`), **or** configure it in-app at **Admin → AI
+   Settings** (stored in the DB, overrides env) and use its "Test connection"
+   button. Without a key the tutor runs in safe demo mode.
 6. To enable live payments, set `BILLPLZ_API_KEY`, `BILLPLZ_COLLECTION_ID`,
    `BILLPLZ_X_SIGNATURE`, `APP_URL` (and `BILLPLZ_SANDBOX=false` for production).
    Without a key, checkout runs in demo mode and activates plans instantly.

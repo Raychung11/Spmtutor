@@ -15,6 +15,7 @@ function admin_layout_start(string $title, array $user, string $current): void
         ['label' => 'Subscriptions', 'href' => 'admin/subscriptions.php'],
         ['label' => 'Schools',      'href' => 'admin/schools.php'],
         ['label' => 'Leads',        'href' => 'admin/leads.php'],
+        ['label' => 'AI Settings',  'href' => 'admin/ai_settings.php'],
         ['label' => 'AI Prompts',   'href' => 'admin/ai_prompts.php'],
         ['label' => 'Landing CMS',  'href' => 'admin/landing.php'],
     ], $current);
