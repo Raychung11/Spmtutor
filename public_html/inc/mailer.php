@@ -140,6 +140,18 @@ function smtp_helo_host(): string
     return $host;
 }
 
+/** Human-readable description of the active mail transport (for admin UI). */
+function mail_transport_label(): string
+{
+    if (!MAIL_ENABLED) {
+        return 'Disabled — emails are logged to logs/app.log (set MAIL_ENABLED=true)';
+    }
+    if (SMTP_HOST !== '' && SMTP_PASS !== '') {
+        return 'SMTP via ' . SMTP_HOST . ':' . SMTP_PORT . ' (' . SMTP_SECURE . ')';
+    }
+    return 'PHP mail() — set SMTP_PASS for reliable delivery';
+}
+
 /** Wrap content in a simple branded HTML shell. */
 function email_template(string $title, string $bodyHtml): string
 {

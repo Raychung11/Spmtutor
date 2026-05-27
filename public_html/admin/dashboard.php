@@ -1,9 +1,31 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/../inc/auth.php';
+require_once __DIR__ . '/../inc/mailer.php';
 require_once __DIR__ . '/../inc/admin_layout.php';
 
 $user = require_role('admin', 'creator');
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && input('action') === 'send_test_email') {
+    csrf_check();
+    $to = strtolower(input('test_email')) ?: $user['email'];
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+        flash('error', 'Enter a valid email address.');
+    } elseif (!MAIL_ENABLED) {
+        send_email($to, 'LulusAI test email', email_template('Test email', '<p>This is a test.</p>'));
+        flash('info', 'Email is disabled (MAIL_ENABLED=false). The message was written to logs/app.log instead of sent.');
+    } else {
+        $ok = send_email(
+            $to,
+            'LulusAI test email',
+            email_template('Test email', '<p>If you can read this, your email delivery is working. 🎉</p>')
+        );
+        flash($ok ? 'success' : 'error', $ok
+            ? 'Test email sent to ' . $to . ' via ' . mail_transport_label() . '.'
+            : 'Sending failed. Check SMTP settings and logs/app.log.');
+    }
+    redirect('admin/dashboard.php');
+}
 
 $counts = [
     'users'    => (int) (db_one('SELECT COUNT(*) c FROM users')['c'] ?? 0),
@@ -54,6 +76,17 @@ admin_layout_start('Admin Dashboard', $user, 'dashboard.php');
       </tbody></table>
     <?php else: ?><p class="muted">No data yet.</p><?php endif; ?>
   </div>
+</div>
+
+<div class="card" style="margin-top:18px">
+  <h3>Email / SMTP test</h3>
+  <p class="muted">Current transport: <strong><?= e(mail_transport_label()) ?></strong></p>
+  <form method="post" style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="send_test_email">
+    <div class="field" style="margin:0;flex:1;min-width:220px"><label>Send a test email to</label><input class="input" type="email" name="test_email" value="<?= e($user['email']) ?>"></div>
+    <button class="btn">Send test email</button>
+  </form>
 </div>
 <?php
 admin_layout_end();
