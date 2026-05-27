@@ -195,8 +195,11 @@ member's account with the invited role on acceptance.
 9. Existing databases: run `sql/migrations/phase4.sql`, `phase5.sql`,
    `phase6.sql` (school portal + `school_admin` role), `phase7.sql`
    (school invitations), then `phase8.sql` (contact leads), once each.
-10. To send real emails, set `MAIL_ENABLED=true` and `MAIL_FROM`. Otherwise the
-    password-reset link is written to `logs/app.log`.
+10. To send real emails, set `MAIL_ENABLED=true`. For reliable delivery, set
+    `SMTP_PASS` (the `hello@lulusai.my` mailbox password) — SMTP defaults target
+    Hostinger (`smtp.hostinger.com:465`, user = `MAIL_FROM`). For port 587 use
+    `SMTP_SECURE=tls` + `SMTP_PORT=587`. Without `SMTP_PASS`, it falls back to
+    PHP `mail()`; without `MAIL_ENABLED`, links are written to `logs/app.log`.
 11. (Optional) populate a demo environment: `php cron/seed_demo.php`.
 
 ## 8. AI safety

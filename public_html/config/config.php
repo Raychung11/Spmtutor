@@ -59,6 +59,15 @@ define('MAIL_ENABLED', filter_var(getenv('MAIL_ENABLED') ?: 'false', FILTER_VALI
 define('MAIL_FROM', getenv('MAIL_FROM') ?: 'hello@lulusai.my');
 define('MAIL_FROM_NAME', getenv('MAIL_FROM_NAME') ?: APP_NAME);
 
+// SMTP (preferred for reliable delivery). Defaults target Hostinger; just set
+// SMTP_PASS (and MAIL_ENABLED=true) to enable. Falls back to PHP mail() when
+// SMTP_HOST/SMTP_PASS are not configured.
+define('SMTP_HOST', getenv('SMTP_HOST') ?: 'smtp.hostinger.com');
+define('SMTP_PORT', (int) (getenv('SMTP_PORT') ?: 465));
+define('SMTP_USER', getenv('SMTP_USER') ?: MAIL_FROM);
+define('SMTP_PASS', getenv('SMTP_PASS') ?: '');
+define('SMTP_SECURE', getenv('SMTP_SECURE') ?: 'ssl'); // 'ssl' (465) or 'tls' (587)
+
 // --- Security ---
 define('LOGIN_MAX_ATTEMPTS', (int) (getenv('LOGIN_MAX_ATTEMPTS') ?: 5));
 define('LOGIN_LOCKOUT_MINUTES', (int) (getenv('LOGIN_LOCKOUT_MINUTES') ?: 15));
