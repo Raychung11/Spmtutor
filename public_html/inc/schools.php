@@ -197,6 +197,18 @@ function school_member_count(int $schoolId, string $role): int
     )['c'] ?? 0);
 }
 
+/** All schools a user belongs to (active first), with status. */
+function user_schools(int $userId, string $role): array
+{
+    return db_all(
+        'SELECT m.status, m.created_at, s.id, s.name, s.type
+         FROM school_members m JOIN schools s ON s.id = m.school_id
+         WHERE m.user_id = ? AND m.member_role = ?
+         ORDER BY (m.status = "active") DESC, m.id DESC',
+        [$userId, $role]
+    );
+}
+
 /** Pending self-requested join requests for a school + role. */
 function pending_member_requests(int $schoolId, string $role): array
 {

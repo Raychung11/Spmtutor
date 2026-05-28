@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/../inc/auth.php';
+require_once __DIR__ . '/../inc/schools.php';
 require_once __DIR__ . '/../inc/teacher_layout.php';
 
 $user = require_role('teacher');
@@ -22,9 +23,25 @@ $pendingUploads = db_all(
     'SELECT au.id, u.name, au.created_at FROM answer_uploads au
      JOIN users u ON u.id = au.user_id WHERE au.status IN ("uploaded","marked") ORDER BY au.id DESC LIMIT 10'
 );
+$schoolLinks = user_schools($uid, 'teacher');
 
 teacher_layout_start('Teacher Dashboard', $user, 'dashboard.php');
 ?>
+<?php if ($schoolLinks): ?>
+  <div class="card" style="margin-bottom:18px">
+    <h3 style="margin-top:0">My school</h3>
+    <?php foreach ($schoolLinks as $sl): ?>
+      <p style="margin:6px 0"><strong><?= e($sl['name']) ?></strong>
+        <span class="badge <?= $sl['status'] === 'active' ? 'badge--good' : 'badge--warn' ?>"><?= $sl['status'] === 'active' ? 'joined' : 'pending approval' ?></span>
+        <span class="muted" style="font-size:13px">&middot; <?= e($sl['type'] === 'school' ? 'School' : 'Learning centre') ?></span>
+      </p>
+      <?php if ($sl['status'] !== 'active'): ?>
+        <p class="muted" style="font-size:13px;margin:0">Your join request is waiting for the school admin to approve it.</p>
+      <?php endif; ?>
+    <?php endforeach; ?>
+  </div>
+<?php endif; ?>
+
 <div class="card">
   <h3>Students</h3>
   <table class="table">

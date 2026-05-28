@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../inc/auth.php';
 require_once __DIR__ . '/../inc/progress.php';
+require_once __DIR__ . '/../inc/schools.php';
 require_once __DIR__ . '/../inc/student_layout.php';
 
 $user = require_role('student');
@@ -18,7 +19,8 @@ $weak = db_all(
      WHERE ts.user_id = ? ORDER BY ts.mastery ASC LIMIT 4',
     [$uid]
 );
-$badges = db_all('SELECT b.name, b.description FROM student_badges sb JOIN badges b ON b.id = sb.badge_id WHERE sb.user_id = ? ORDER BY sb.earned_at DESC', [$uid]);
+$badges       = db_all('SELECT b.name, b.description FROM student_badges sb JOIN badges b ON b.id = sb.badge_id WHERE sb.user_id = ? ORDER BY sb.earned_at DESC', [$uid]);
+$schoolLinks  = user_schools($uid, 'student');
 
 student_layout_start('Dashboard', $user, 'dashboard.php');
 ?>
@@ -28,6 +30,21 @@ student_layout_start('Dashboard', $user, 'dashboard.php');
   <div class="card stat"><div class="stat__value"><?= (int)$streak['current_streak'] ?> 🔥</div><div class="stat__label">Day streak</div></div>
   <div class="card stat"><div class="stat__value">Lv <?= (int)$profile['level'] ?></div><div class="stat__label"><?= (int)$profile['xp'] ?> XP</div></div>
 </div>
+
+<?php if ($schoolLinks): ?>
+  <div class="card" style="margin-top:18px">
+    <h3 style="margin-top:0">My school</h3>
+    <?php foreach ($schoolLinks as $sl): ?>
+      <p style="margin:6px 0"><strong><?= e($sl['name']) ?></strong>
+        <span class="badge <?= $sl['status'] === 'active' ? 'badge--good' : 'badge--warn' ?>"><?= $sl['status'] === 'active' ? 'joined' : 'pending approval' ?></span>
+        <span class="muted" style="font-size:13px">&middot; <?= e($sl['type'] === 'school' ? 'School' : 'Learning centre') ?></span>
+      </p>
+      <?php if ($sl['status'] !== 'active'): ?>
+        <p class="muted" style="font-size:13px;margin:0">Your join request is waiting for the school admin to approve it.</p>
+      <?php endif; ?>
+    <?php endforeach; ?>
+  </div>
+<?php endif; ?>
 
 <div class="grid grid--2" style="margin-top:18px">
   <div class="card">
