@@ -2,26 +2,30 @@
 declare(strict_types=1);
 require_once __DIR__ . '/inc/auth.php';
 require_once __DIR__ . '/inc/ui.php';
+require_once __DIR__ . '/inc/notifications.php';
 
 if (is_logged_in()) {
     redirect(dashboard_for(current_user()['role']));
 }
 
-$levels = [];
+$levels  = [];
+$schools = [];
 try {
-    $levels = db_all('SELECT id, name FROM education_levels WHERE status = "active" ORDER BY sort_order');
+    $levels  = db_all('SELECT id, name FROM education_levels WHERE status = "active" ORDER BY sort_order');
+    $schools = db_all('SELECT id, name FROM schools WHERE status = "active" ORDER BY name');
 } catch (Throwable $e) {
     redirect('install.php');
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
-    $name  = input('name');
-    $email = strtolower(input('email'));
-    $phone = input('phone');
-    $pass  = input('password');
-    $role  = in_array(input('role'), ['student', 'parent', 'teacher'], true) ? input('role') : 'student';
-    $level = input_int('education_level_id');
+    $name     = input('name');
+    $email    = strtolower(input('email'));
+    $phone    = input('phone');
+    $pass     = input('password');
+    $role     = in_array(input('role'), ['student', 'parent', 'teacher'], true) ? input('role') : 'student';
+    $level    = input_int('education_level_id');
+    $schoolId = input_int('school_id');
 
     $err = null;
     if ($name === '' || $email === '' || $pass === '') {
@@ -42,10 +46,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($role === 'student' && $level) {
             db_exec('UPDATE student_profiles SET education_level_id = ? WHERE user_id = ?', [$level, $uid]);
         }
+
+        // Optional school join request (student/teacher only).
+        if ($schoolId && in_array($role, ['student', 'teacher'], true)) {
+            $school = db_one('SELECT id, name, owner_user_id FROM schools WHERE id = ? AND status = "active"', [$schoolId]);
+            if ($school) {
+                db_exec(
+                    'INSERT INTO school_members (school_id, user_id, member_role, status) VALUES (?,?,?,?)',
+                    [(int) $school['id'], $uid, $role, 'pending']
+                );
+                if ($school['owner_user_id']) {
+                    notify((int) $school['owner_user_id'], 'New ' . $role . ' join request',
+                        $name . ' (' . $email . ') asked to join ' . $school['name'] . '.', 'school');
+                }
+            }
+        }
+
         boot_session();
         session_regenerate_id(true);
         $_SESSION['uid'] = $uid;
-        flash('success', 'Welcome to ' . APP_NAME . '! Your free trial has started.');
+        $welcome = 'Welcome to ' . APP_NAME . '! Your free trial has started.';
+        if ($schoolId && in_array($role, ['student', 'teacher'], true)) {
+            $welcome .= ' Your request to join the school is pending the school admin\'s approval.';
+        }
+        flash('success', $welcome);
         redirect(dashboard_for($role));
     } catch (RuntimeException $e) {
         flash('error', $e->getMessage());
@@ -80,6 +104,16 @@ render_head('Create account');
           <?php endforeach; ?>
         </select>
       </div>
+      <div class="field" id="schoolField">
+        <label>School / learning centre (optional)</label>
+        <select name="school_id" class="input">
+          <option value="">-- I'm not joining a school --</option>
+          <?php foreach ($schools as $s): ?>
+            <option value="<?= (int)$s['id'] ?>"><?= e($s['name']) ?></option>
+          <?php endforeach; ?>
+        </select>
+        <p class="muted" style="font-size:12px;margin:6px 0 0">Picking a school sends a join request to the school admin for approval.</p>
+      </div>
       <div class="field"><label>Password * (min 8 chars)</label><input class="input" type="password" name="password" required></div>
       <button class="btn btn--block" type="submit">Create account</button>
     </form>
@@ -90,9 +124,13 @@ render_head('Create account');
 <script>
   var roleSel = document.getElementById('roleSel');
   var levelField = document.getElementById('levelField');
-  roleSel.addEventListener('change', function () {
-    levelField.style.display = roleSel.value === 'student' ? '' : 'none';
-  });
+  var schoolField = document.getElementById('schoolField');
+  function syncFields() {
+    levelField.style.display  = roleSel.value === 'student' ? '' : 'none';
+    schoolField.style.display = roleSel.value === 'parent'  ? 'none' : '';
+  }
+  roleSel.addEventListener('change', syncFields);
+  syncFields();
 </script>
 </body>
 </html>

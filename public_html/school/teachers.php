@@ -30,12 +30,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($a === 'resend_invite') {
         resend_invitation($sid, input_int('invite_id'));
         flash('success', 'Invitation resent.');
+    } elseif ($a === 'approve_request') {
+        approve_member_request($sid, input_int('member_id'));
+        flash('success', 'Join request approved.');
+    } elseif ($a === 'decline_request') {
+        remove_school_member($sid, input_int('member_id'));
+        flash('success', 'Join request declined.');
     }
     redirect('school/teachers.php');
 }
 
 $teachers = school_members($sid, 'teacher');
 $invites  = array_filter(pending_invitations($sid), fn($i) => $i['member_role'] === 'teacher');
+$requests = pending_member_requests($sid, 'teacher');
 
 school_layout_start('Teachers', $user, 'teachers.php');
 ?>
@@ -52,6 +59,26 @@ school_layout_start('Teachers', $user, 'teachers.php');
     <button class="btn" <?= school_approved($school) ? '' : 'disabled' ?>>Add / invite</button>
   </form>
 </div>
+
+<?php if ($requests): ?>
+  <div class="card" style="margin-top:18px">
+    <h3>Pending join requests (<?= count($requests) ?>)</h3>
+    <p class="muted" style="font-size:13px">Teachers who registered and asked to join your school.</p>
+    <table class="table"><thead><tr><th>Name</th><th>Email</th><th>Requested</th><th></th></tr></thead><tbody>
+    <?php foreach ($requests as $r): ?>
+      <tr>
+        <td><?= e($r['name']) ?></td>
+        <td class="muted"><?= e($r['email']) ?></td>
+        <td class="muted"><?= e(date('d M', strtotime((string)$r['created_at']))) ?></td>
+        <td style="white-space:nowrap">
+          <form method="post" style="display:inline"><?= csrf_field() ?><input type="hidden" name="action" value="approve_request"><input type="hidden" name="member_id" value="<?= (int)$r['member_id'] ?>"><button class="btn btn--sm">Approve</button></form>
+          <form method="post" style="display:inline" onsubmit="return confirm('Decline this join request?')"><?= csrf_field() ?><input type="hidden" name="action" value="decline_request"><input type="hidden" name="member_id" value="<?= (int)$r['member_id'] ?>"><button class="btn btn--sm btn--danger">Decline</button></form>
+        </td>
+      </tr>
+    <?php endforeach; ?>
+    </tbody></table>
+  </div>
+<?php endif; ?>
 
 <?php if ($invites): ?>
   <div class="card" style="margin-top:18px">

@@ -176,7 +176,7 @@ function school_members(int $schoolId, string $role): array
              FROM school_members m JOIN users u ON u.id = m.user_id
              LEFT JOIN student_progress_summary ps ON ps.user_id = u.id
              LEFT JOIN student_streaks st ON st.user_id = u.id
-             WHERE m.school_id = ? AND m.member_role = "student" ORDER BY u.name',
+             WHERE m.school_id = ? AND m.member_role = "student" AND m.status = "active" ORDER BY u.name',
             [$schoolId]
         );
     }
@@ -184,14 +184,46 @@ function school_members(int $schoolId, string $role): array
         'SELECT m.id AS member_id, u.id, u.name, u.email,
                 (SELECT COUNT(*) FROM teacher_classes c WHERE c.teacher_user_id = u.id) AS class_count
          FROM school_members m JOIN users u ON u.id = m.user_id
-         WHERE m.school_id = ? AND m.member_role = "teacher" ORDER BY u.name',
+         WHERE m.school_id = ? AND m.member_role = "teacher" AND m.status = "active" ORDER BY u.name',
         [$schoolId]
     );
 }
 
 function school_member_count(int $schoolId, string $role): int
 {
-    return (int) (db_one('SELECT COUNT(*) c FROM school_members WHERE school_id = ? AND member_role = ?', [$schoolId, $role])['c'] ?? 0);
+    return (int) (db_one(
+        'SELECT COUNT(*) c FROM school_members WHERE school_id = ? AND member_role = ? AND status = "active"',
+        [$schoolId, $role]
+    )['c'] ?? 0);
+}
+
+/** Pending self-requested join requests for a school + role. */
+function pending_member_requests(int $schoolId, string $role): array
+{
+    return db_all(
+        'SELECT m.id AS member_id, u.name, u.email, m.created_at
+         FROM school_members m JOIN users u ON u.id = m.user_id
+         WHERE m.school_id = ? AND m.member_role = ? AND m.status = "pending"
+         ORDER BY m.id DESC',
+        [$schoolId, $role]
+    );
+}
+
+/** Approve a pending join request and notify the user. */
+function approve_member_request(int $schoolId, int $memberId): bool
+{
+    $row = db_one(
+        'SELECT m.id, m.user_id, m.member_role, s.name AS school_name
+         FROM school_members m JOIN schools s ON s.id = m.school_id
+         WHERE m.id = ? AND m.school_id = ? AND m.status = "pending"',
+        [$memberId, $schoolId]
+    );
+    if (!$row) {
+        return false;
+    }
+    db_exec('UPDATE school_members SET status = "active" WHERE id = ?', [(int) $row['id']]);
+    notify((int) $row['user_id'], 'You joined ' . $row['school_name'], 'Your join request was approved.', 'school');
+    return true;
 }
 
 /** School-wide aggregate analytics across member students. */
