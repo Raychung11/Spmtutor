@@ -36,6 +36,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$installed) {
             $pdo->exec(file_get_contents(__DIR__ . '/sql/content.sql'));
             $messages[] = 'Content pack inserted.';
 
+            // Run the idempotent course seeder for the broader catalog.
+            require_once __DIR__ . '/cron/seed_courses.php';
+            $cs = seed_courses();
+            $messages[] = "Courses seeded — topics: {$cs['topics']}, skills: {$cs['skills']}, questions: {$cs['questions']}.";
+
             // Create / update the admin account with a real password hash.
             $hash = password_hash($adminPass, PASSWORD_BCRYPT);
             $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ?');
