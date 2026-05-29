@@ -95,9 +95,12 @@
     document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
   })();
 
-  // ----- Light parallax on the hero artwork -----
+  // ----- Light parallax on the hero artwork (desktop only) -----
   (function () {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // Skip on small screens — momentum scrolling on phones makes parallax
+    // feel jittery rather than smooth.
+    if (matchMedia('(max-width: 860px)').matches) return;
     var art = document.querySelector('.lhero__art');
     if (!art) return;
     var ticking = false;

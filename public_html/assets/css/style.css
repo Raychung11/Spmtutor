@@ -131,10 +131,19 @@ textarea { resize: vertical; min-height: 90px; }
 
 @media (max-width: 760px) {
   .app { grid-template-columns: 1fr; }
-  .sidebar { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .sidebar { flex-direction: row; flex-wrap: wrap; align-items: center; padding: 12px 12px; gap: 4px; overflow-x: auto; }
   .sidebar__panel { display: none; }
-  .sidebar__nav { flex-direction: row; flex-wrap: wrap; }
-  .navlink--logout { margin-top: 0; }
+  .sidebar__nav { flex-direction: row; flex-wrap: wrap; gap: 4px; }
+  .navlink { padding: 8px 12px; font-size: 13px; min-height: 36px; line-height: 1.2; }
+  .navlink--logout { margin-top: 0; margin-left: auto; }
+  .brand { font-size: 16px; padding: 6px 6px; }
+  .topbar { padding: 12px 16px; }
+  .topbar__title { font-size: 17px; }
+  .topbar__name { display: none; } /* save room — avatar + bell are enough */
+  .page { padding: 16px; }
+  .stat__value { font-size: 24px; }
+  /* Force tables to scroll horizontally on phones instead of squishing. */
+  .table { display: block; overflow-x: auto; white-space: nowrap; }
 }
 
 /* ---------- Landing ---------- */
@@ -237,8 +246,22 @@ html { scroll-behavior: smooth; }
 @media (max-width: 760px) {
   .lhero { padding: 50px 0 30px; }
   .lhero__copy h1 { font-size: 36px; }
+  .lhero__copy p { font-size: 17px; }
+  .lhero__cta { gap: 8px; }
+  .lhero__cta .btn { flex: 1 1 100%; text-align: center; }
   .section { padding: 50px 0; }
   .section h2 { font-size: 28px; }
+  .section .lead { font-size: 16px; }
+  /* Lighter scroll-reveal travel on small screens so animations feel snappy
+     rather than jumpy on touch scrolling. */
+  .reveal { transform: translateY(20px); }
+  .reveal--scale { transform: translateY(20px) scale(.97); }
+  .reveal--stagger > * { transform: translateY(16px); }
+  .chatcard { animation: none; } /* avoid double-motion with parallax-free hero */
+  .lnav__inner { padding: 10px 0; }
+  .price { font-size: 32px; }
+  /* The chat-card mockup gets unwieldy on small phones — constrain it. */
+  .chatcard .msg { font-size: 14px; padding: 10px 13px; }
 }
 
 /* Subtle float on the hero card so it feels alive. */
