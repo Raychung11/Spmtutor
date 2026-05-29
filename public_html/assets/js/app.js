@@ -115,6 +115,26 @@
     }, { passive: true });
   })();
 
+  // ----- Mobile nav drawer (hamburger) -----
+  (function () {
+    document.querySelectorAll('[data-nav-toggle]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.body.classList.toggle('nav-open');
+        var open = document.body.classList.contains('nav-open');
+        btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+      });
+    });
+    document.querySelectorAll('[data-nav-close]').forEach(function (el) {
+      el.addEventListener('click', function () { document.body.classList.remove('nav-open'); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') document.body.classList.remove('nav-open');
+    });
+    window.addEventListener('resize', function () {
+      if (window.innerWidth > 760) document.body.classList.remove('nav-open');
+    });
+  })();
+
   // ----- Cascading subject -> topic selects -----
   document.querySelectorAll('[data-load-topics]').forEach(function (sel) {
     var target = document.getElementById(sel.getAttribute('data-target'));

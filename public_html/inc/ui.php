@@ -41,9 +41,10 @@ function render_flashes(): void
 function dash_header(string $title, array $user, array $nav, string $panelLabel): void
 {
     render_head($title);
+    $primary = array_values(array_filter($nav, fn($i) => !empty($i['primary'])));
     ?>
 <div class="app">
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar" aria-label="Main navigation">
     <a class="brand" href="<?= url('') ?>"><?= e(APP_NAME) ?></a>
     <div class="sidebar__panel"><?= e($panelLabel) ?></div>
     <nav class="sidebar__nav">
@@ -53,8 +54,12 @@ function dash_header(string $title, array $user, array $nav, string $panelLabel)
     </nav>
     <a class="navlink navlink--logout" href="<?= url('logout.php') ?>">Log out</a>
   </aside>
+  <div class="drawer-backdrop" data-nav-close aria-hidden="true"></div>
   <main class="content">
     <header class="topbar">
+      <button class="topbar__toggle" type="button" aria-label="Open menu" aria-controls="sidebar" data-nav-toggle>
+        <span></span><span></span><span></span>
+      </button>
       <h1 class="topbar__title"><?= e($title) ?></h1>
       <div class="topbar__user">
         <?php $unread = unread_count((int) $user['id']); ?>
@@ -68,6 +73,18 @@ function dash_header(string $title, array $user, array $nav, string $panelLabel)
     <div class="page">
       <?php render_flashes(); ?>
 <?php
+    if ($primary) {
+        ?>
+<nav class="botnav" aria-label="Quick navigation">
+  <?php foreach ($primary as $item): ?>
+    <a class="botnav__link<?= !empty($item['active']) ? ' botnav__link--active' : '' ?>" href="<?= url($item['href']) ?>">
+      <span class="botnav__icon" aria-hidden="true"><?= e($item['icon'] ?? '•') ?></span>
+      <span class="botnav__label"><?= e($item['label']) ?></span>
+    </a>
+  <?php endforeach; ?>
+</nav>
+<?php
+    }
 }
 
 function dash_footer(): void

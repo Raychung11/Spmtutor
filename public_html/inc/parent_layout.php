@@ -5,9 +5,9 @@ require_once __DIR__ . '/ui.php';
 function parent_layout_start(string $title, array $user, string $current): void
 {
     $nav = build_nav([
-        ['label' => 'Dashboard',     'href' => 'parent/dashboard.php'],
-        ['label' => 'Notifications', 'href' => 'notifications.php'],
-        ['label' => 'Pricing',       'href' => 'pricing.php'],
+        ['label' => 'Dashboard',     'href' => 'parent/dashboard.php', 'primary' => true, 'icon' => '🏠'],
+        ['label' => 'Notifications', 'href' => 'notifications.php',    'primary' => true, 'icon' => '🔔'],
+        ['label' => 'Pricing',       'href' => 'pricing.php',          'primary' => true, 'icon' => '💳'],
     ], $current);
     dash_header($title, $user, $nav, 'Parent');
 }

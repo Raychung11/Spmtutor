@@ -5,10 +5,10 @@ require_once __DIR__ . '/ui.php';
 function school_layout_start(string $title, array $user, string $current): void
 {
     $nav = build_nav([
-        ['label' => 'Dashboard',     'href' => 'school/dashboard.php'],
-        ['label' => 'Teachers',      'href' => 'school/teachers.php'],
-        ['label' => 'Students',      'href' => 'school/students.php'],
-        ['label' => 'Analytics',     'href' => 'school/analytics.php'],
+        ['label' => 'Dashboard',     'href' => 'school/dashboard.php',  'primary' => true, 'icon' => '🏠'],
+        ['label' => 'Teachers',      'href' => 'school/teachers.php',   'primary' => true, 'icon' => '👤'],
+        ['label' => 'Students',      'href' => 'school/students.php',   'primary' => true, 'icon' => '👥'],
+        ['label' => 'Analytics',     'href' => 'school/analytics.php',  'primary' => true, 'icon' => '📊'],
         ['label' => 'Billing',       'href' => 'school/billing.php'],
         ['label' => 'Notifications', 'href' => 'notifications.php'],
     ], $current);

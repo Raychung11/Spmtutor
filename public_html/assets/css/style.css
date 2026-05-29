@@ -129,20 +129,65 @@ textarea { resize: vertical; min-height: 90px; }
 .snap-result dd { margin: 2px 0 0; }
 .page { padding: 26px; }
 
+/* Hamburger button — hidden on desktop. */
+.topbar__toggle { display: none; background: transparent; border: 0; padding: 8px; width: 40px; height: 40px; flex-direction: column; justify-content: space-around; align-items: center; cursor: pointer; }
+.topbar__toggle span { display: block; width: 22px; height: 2px; background: var(--text); border-radius: 2px; transition: transform .25s ease, opacity .25s ease; }
+body.nav-open .topbar__toggle span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+body.nav-open .topbar__toggle span:nth-child(2) { opacity: 0; }
+body.nav-open .topbar__toggle span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* Drawer backdrop + bottom nav are off by default; revealed on mobile. */
+.drawer-backdrop { display: none; }
+.botnav { display: none; }
+
 @media (max-width: 760px) {
+  body.nav-open { overflow: hidden; } /* lock scroll behind drawer */
   .app { grid-template-columns: 1fr; }
-  .sidebar { flex-direction: row; flex-wrap: wrap; align-items: center; padding: 12px 12px; gap: 4px; overflow-x: auto; }
-  .sidebar__panel { display: none; }
-  .sidebar__nav { flex-direction: row; flex-wrap: wrap; gap: 4px; }
-  .navlink { padding: 8px 12px; font-size: 13px; min-height: 36px; line-height: 1.2; }
-  .navlink--logout { margin-top: 0; margin-left: auto; }
-  .brand { font-size: 16px; padding: 6px 6px; }
-  .topbar { padding: 12px 16px; }
-  .topbar__title { font-size: 17px; }
-  .topbar__name { display: none; } /* save room — avatar + bell are enough */
-  .page { padding: 16px; }
+
+  .topbar__toggle { display: inline-flex; }
+  .topbar { padding: 12px 14px; gap: 8px; }
+  .topbar__title { font-size: 17px; flex: 1; }
+  .topbar__name { display: none; }
+  .brand { font-size: 17px; padding: 4px 6px; }
+
+  /* Sidebar becomes an off-canvas drawer. */
+  .sidebar {
+    position: fixed; top: 0; left: 0; height: 100vh; width: 280px; max-width: 82vw;
+    z-index: 60; padding: 20px 14px; gap: 6px;
+    background: var(--bg-2); border-right: 1px solid var(--border);
+    transform: translateX(-105%); transition: transform .3s cubic-bezier(.2,.7,.2,1);
+    overflow-y: auto;
+    flex-direction: column;
+  }
+  body.nav-open .sidebar { transform: none; }
+  .sidebar__nav { flex-direction: column; gap: 4px; }
+  .navlink { display: block; padding: 12px 12px; font-size: 14px; min-height: 44px; }
+  .navlink--logout { margin-top: auto; margin-left: 0; }
+
+  .drawer-backdrop {
+    display: block; position: fixed; inset: 0; z-index: 55;
+    background: rgba(0,0,0,.55); opacity: 0; pointer-events: none;
+    transition: opacity .25s ease;
+  }
+  body.nav-open .drawer-backdrop { opacity: 1; pointer-events: auto; }
+
+  /* Bottom nav with primary actions. */
+  .botnav {
+    display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
+    background: rgba(15,11,30,.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border); padding: 6px 4px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+    text-align: center;
+  }
+  .botnav__link { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 6px 4px; border-radius: 10px; color: var(--muted); font-size: 11px; text-decoration: none; min-height: 52px; }
+  .botnav__link:hover, .botnav__link:focus { text-decoration: none; color: var(--text); }
+  .botnav__icon { font-size: 20px; line-height: 1; }
+  .botnav__label { font-size: 11px; }
+  .botnav__link--active { color: var(--text); background: var(--card-2); }
+
+  .page { padding: 16px; padding-bottom: 88px; } /* leave room for botnav */
   .stat__value { font-size: 24px; }
-  /* Force tables to scroll horizontally on phones instead of squishing. */
   .table { display: block; overflow-x: auto; white-space: nowrap; }
 }
 
