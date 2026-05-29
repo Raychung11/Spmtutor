@@ -6,12 +6,38 @@ require_once __DIR__ . '/../inc/admin_layout.php';
 $admin  = require_role('admin');
 $output = null;
 
+/** List migration files in numeric order (phase4.sql, phase5.sql, …). */
+function list_migration_files(): array
+{
+    $dir = __DIR__ . '/../sql/migrations';
+    $files = glob($dir . '/*.sql') ?: [];
+    sort($files, SORT_NATURAL);
+    return $files;
+}
+
+/** Track applied migrations in a tiny table; create it on demand. */
+function ensure_migrations_table(): void
+{
+    db_exec('CREATE TABLE IF NOT EXISTS applied_migrations (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        filename VARCHAR(190) NOT NULL UNIQUE,
+        applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB');
+}
+
+function applied_migration_set(): array
+{
+    ensure_migrations_table();
+    $rows = db_all('SELECT filename FROM applied_migrations');
+    return array_column($rows, 'filename');
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
     $which = input('which');
     $force = input('force') === '1';
 
-    @set_time_limit(120); // some seeders do a lot of inserts
+    @set_time_limit(180);
 
     try {
         switch ($which) {
@@ -70,6 +96,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ];
                 break;
 
+            case 'migrations':
+                $applied = applied_migration_set();
+                $cfg = require __DIR__ . '/../config/db_config.php';
+                $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=%s', $cfg['host'], $cfg['port'], $cfg['name'], $cfg['charset']);
+                $pdo = new PDO($dsn, $cfg['user'], $cfg['pass'], [
+                    PDO::ATTR_ERRMODE          => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_EMULATE_PREPARES => true,
+                ]);
+                $lines = [];
+                foreach (list_migration_files() as $path) {
+                    $name = basename($path);
+                    if (!$force && in_array($name, $applied, true)) {
+                        $lines[] = '[skip] ' . $name . ' — already applied';
+                        continue;
+                    }
+                    try {
+                        $pdo->exec(file_get_contents($path));
+                        db_exec(
+                            'INSERT INTO applied_migrations (filename) VALUES (?)
+                             ON DUPLICATE KEY UPDATE applied_at = NOW()',
+                            [$name]
+                        );
+                        $lines[] = '[ok]   ' . $name;
+                    } catch (Throwable $e) {
+                        $lines[] = '[FAIL] ' . $name . ' — ' . $e->getMessage();
+                    }
+                }
+                $output = ['title' => 'Migrations', 'lines' => $lines ?: ['No migration files found.'], 'kind' => 'success'];
+                break;
+
             default:
                 flash('error', 'Unknown seeder.');
                 redirect('admin/seeders.php');
@@ -80,6 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $seeders = [
+    ['key' => 'migrations',     'name' => 'Run database migrations', 'desc' => 'Apply any pending sql/migrations/*.sql files (e.g. phase4, phase5, phase6 school portal, phase7 invitations, phase8 leads). Each file runs at most once. Tracks state in an applied_migrations table.', 'has_force' => true],
     ['key' => 'courses',        'name' => 'Seed courses',         'desc' => 'Add the topics, skills and MCQs from the course catalog (Math, Add Maths, Physics, Chemistry, Biology, English, BM). Idempotent — already-present items are skipped.'],
     ['key' => 'demo_logins',    'name' => 'Demo logins (5 roles)','desc' => 'Create one demo account per role (student, parent, teacher, school admin, platform admin) with predictable credentials and sensible relationships.'],
     ['key' => 'demo_data',      'name' => 'Demo data (rich)',     'desc' => 'Populate sample students with attempts, subscriptions, a class, a Snap & Check marking and parent reports so dashboards look alive.', 'has_force' => true],
