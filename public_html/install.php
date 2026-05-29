@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$installed) {
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Install <?= e(APP_NAME) ?></title>
-<link rel="stylesheet" href="<?= url('assets/css/style.css') ?>">
+<link rel="stylesheet" href="<?= url('assets/css/style.css') ?>?v=<?= @filemtime(__DIR__ . '/assets/css/style.css') ?: time() ?>">
 </head><body>
 <div class="auth"><div class="card auth__card">
   <div class="auth__brand"><?= e(APP_NAME) ?></div>

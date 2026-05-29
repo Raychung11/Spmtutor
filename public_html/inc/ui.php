@@ -10,13 +10,15 @@ require_once __DIR__ . '/notifications.php';
 function render_head(string $title): void
 {
     $name = APP_NAME;
+    // Cache-bust assets on file modification so users never get a stale CSS/JS.
+    $cssVer = @filemtime(APP_ROOT . '/assets/css/style.css') ?: time();
     ?><!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= e($title) ?> &middot; <?= e($name) ?></title>
-<link rel="stylesheet" href="<?= url('assets/css/style.css') ?>">
+<link rel="stylesheet" href="<?= url('assets/css/style.css') ?>?v=<?= $cssVer ?>">
 </head>
 <body><?php
 }
@@ -89,11 +91,12 @@ function dash_header(string $title, array $user, array $nav, string $panelLabel)
 
 function dash_footer(): void
 {
+    $jsVer = @filemtime(APP_ROOT . '/assets/js/app.js') ?: time();
     ?>
     </div>
   </main>
 </div>
-<script src="<?= url('assets/js/app.js') ?>"></script>
+<script src="<?= url('assets/js/app.js') ?>?v=<?= $jsVer ?>"></script>
 </body>
 </html><?php
 }
