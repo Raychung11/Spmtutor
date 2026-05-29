@@ -1,10 +1,15 @@
 <?php
 /**
- * Lightweight role demo seeder (CLI only). Creates one demo account per
- * role — student, parent, teacher — with predictable credentials and
- * sensible relationships (parent linked to student; teacher with a class
- * containing the student). Idempotent: existing accounts are left in
- * place, missing pieces are added.
+ * Lightweight demo logins seeder (CLI only). Creates one demo account per
+ * role — student, parent, teacher, school admin, platform admin — with
+ * predictable credentials and sensible relationships:
+ *
+ *   - parent linked to student
+ *   - teacher owns "Demo Class" containing the student
+ *   - school admin owns "Demo School" (active); student & teacher are
+ *     enrolled as active members of that school
+ *
+ * Idempotent — existing accounts and links are kept, missing pieces added.
  *
  *   php public_html/cron/seed_demo_logins.php
  */
@@ -21,9 +26,11 @@ require_once __DIR__ . '/../inc/classes.php';
 
 $password = 'Demo@123';
 $accounts = [
-    ['role' => 'student', 'name' => 'Demo Student', 'email' => 'student@demo.lulusai.my'],
-    ['role' => 'parent',  'name' => 'Demo Parent',  'email' => 'parent@demo.lulusai.my'],
-    ['role' => 'teacher', 'name' => 'Demo Teacher', 'email' => 'teacher@demo.lulusai.my'],
+    ['role' => 'student',      'name' => 'Demo Student',      'email' => 'student@demo.lulusai.my'],
+    ['role' => 'parent',       'name' => 'Demo Parent',       'email' => 'parent@demo.lulusai.my'],
+    ['role' => 'teacher',      'name' => 'Demo Teacher',      'email' => 'teacher@demo.lulusai.my'],
+    ['role' => 'school_admin', 'name' => 'Demo School Admin', 'email' => 'school@demo.lulusai.my'],
+    ['role' => 'admin',        'name' => 'Demo Admin',        'email' => 'admin@demo.lulusai.my'],
 ];
 
 $results = [];
@@ -59,25 +66,35 @@ db_exec(
     [$classId, $ids['student']]
 );
 
-// If at least one active school exists, enrol the student there (active).
-$school = db_one("SELECT id FROM schools WHERE status = 'active' ORDER BY id LIMIT 1");
+// Demo school owned by the demo school admin.
+$school = db_one('SELECT id FROM schools WHERE owner_user_id = ? LIMIT 1', [$ids['school_admin']]);
 if ($school) {
+    $schoolId = (int) $school['id'];
+    db_exec('UPDATE schools SET status = "active" WHERE id = ?', [$schoolId]);
+} else {
+    $schoolId = db_exec(
+        'INSERT INTO schools (name, type, owner_user_id, contact_email, status) VALUES (?,?,?,?,?)',
+        ['Demo School', 'learning_center', $ids['school_admin'], 'school@demo.lulusai.my', 'active']
+    );
+}
+
+// Enrol student + teacher as active members of the demo school.
+foreach ([['role' => 'student', 'uid' => $ids['student']], ['role' => 'teacher', 'uid' => $ids['teacher']]] as $m) {
     db_exec(
-        "INSERT IGNORE INTO school_members (school_id, user_id, member_role, status)
-         VALUES (?, ?, 'student', 'active')",
-        [(int) $school['id'], $ids['student']]
+        'INSERT INTO school_members (school_id, user_id, member_role, status) VALUES (?,?,?,?)
+         ON DUPLICATE KEY UPDATE status = "active"',
+        [$schoolId, $m['uid'], $m['role'], 'active']
     );
 }
 
 echo "Demo logins ready (password: {$password})\n";
-echo str_repeat('-', 60) . "\n";
+echo str_repeat('-', 70) . "\n";
 foreach ($results as $r) {
-    printf("  [%s] %-7s %s\n", $r['action'], $r['role'], $r['email']);
+    printf("  [%s] %-13s %s\n", $r['action'], $r['role'], $r['email']);
 }
-echo str_repeat('-', 60) . "\n";
+echo str_repeat('-', 70) . "\n";
 echo "Relationships:\n";
 echo "  - Parent linked to Student\n";
 echo "  - Teacher owns 'Demo Class' containing Student\n";
-if ($school) {
-    echo "  - Student enrolled in school id #" . (int) $school['id'] . "\n";
-}
+echo "  - School Admin owns 'Demo School' (active)\n";
+echo "  - Student + Teacher are active members of Demo School\n";
