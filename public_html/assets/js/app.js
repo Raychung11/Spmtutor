@@ -60,6 +60,58 @@
     scrollDown();
   }
 
+  // ----- Apple-style scroll reveal (roll in / out) -----
+  (function () {
+    if (!('IntersectionObserver' in window)) return;
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    // Only auto-tag on the public landing page (skip dashboards).
+    if (!document.querySelector('.lhero, .section, .band')) return;
+
+    function inView(el) {
+      var r = el.getBoundingClientRect();
+      var vh = window.innerHeight || document.documentElement.clientHeight;
+      return r.top < vh && r.bottom > 0;
+    }
+
+    function tag(el, extra) {
+      el.classList.add('reveal');
+      if (extra) el.classList.add(extra);
+      // Anything already on screen at load is shown instantly — no flash.
+      if (inView(el)) el.classList.add('reveal--visible');
+    }
+
+    document.querySelectorAll('.lhero, .section, .band').forEach(function (el) { tag(el); });
+    document.querySelectorAll('.section .grid, .band .grid').forEach(function (g) { tag(g, 'reveal--stagger'); });
+    var art = document.querySelector('.lhero__art');
+    if (art) tag(art, 'reveal--scale');
+
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) e.target.classList.add('reveal--visible');
+        else e.target.classList.remove('reveal--visible');
+      });
+    }, { threshold: 0.15, rootMargin: '0px 0px -10% 0px' });
+
+    document.querySelectorAll('.reveal').forEach(function (el) { io.observe(el); });
+  })();
+
+  // ----- Light parallax on the hero artwork -----
+  (function () {
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var art = document.querySelector('.lhero__art');
+    if (!art) return;
+    var ticking = false;
+    window.addEventListener('scroll', function () {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function () {
+        var y = Math.min(window.scrollY, 600);
+        art.style.translate = '0 ' + (y * -0.08) + 'px';
+        ticking = false;
+      });
+    }, { passive: true });
+  })();
+
   // ----- Cascading subject -> topic selects -----
   document.querySelectorAll('[data-load-topics]').forEach(function (sel) {
     var target = document.getElementById(sel.getAttribute('data-target'));
