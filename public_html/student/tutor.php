@@ -11,7 +11,7 @@ $recent   = db_all('SELECT id, title, created_at FROM ai_chat_sessions WHERE use
 
 student_layout_start('AI Tutor', $user, 'tutor.php');
 ?>
-<div class="grid grid--2" style="grid-template-columns: 1fr 280px;">
+<div class="tutor-layout">
   <div class="card">
     <div id="chat" class="chat" data-api="<?= url('api/tutor.php') ?>" data-csrf="<?= e(csrf_token()) ?>">
       <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
