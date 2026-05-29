@@ -61,7 +61,12 @@ img { max-width: 100%; }
 .grid--3 { grid-template-columns: repeat(3, 1fr); }
 .grid--4 { grid-template-columns: repeat(4, 1fr); }
 @media (max-width: 880px) {
-  .grid--2, .grid--3, .grid--4 { grid-template-columns: 1fr; }
+  .grid--4 { grid-template-columns: repeat(2, 1fr); } /* 2x2 on tablets/large phones */
+  .grid--3 { grid-template-columns: repeat(2, 1fr); }
+  .grid--2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .grid--4, .grid--3 { grid-template-columns: 1fr; } /* single column on small phones */
 }
 
 /* ---------- Stat tiles ---------- */
