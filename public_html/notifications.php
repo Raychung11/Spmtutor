@@ -6,6 +6,7 @@ require_once __DIR__ . '/inc/student_layout.php';
 require_once __DIR__ . '/inc/teacher_layout.php';
 require_once __DIR__ . '/inc/parent_layout.php';
 require_once __DIR__ . '/inc/admin_layout.php';
+require_once __DIR__ . '/inc/school_layout.php';
 
 $user = require_login();
 $uid  = (int) $user['id'];
@@ -22,10 +23,11 @@ $items = list_notifications($uid);
 
 // Choose the layout matching the user's role.
 [$start, $end] = match ($user['role']) {
-    'teacher' => ['teacher_layout_start', 'teacher_layout_end'],
-    'parent'  => ['parent_layout_start', 'parent_layout_end'],
+    'teacher'      => ['teacher_layout_start', 'teacher_layout_end'],
+    'parent'       => ['parent_layout_start', 'parent_layout_end'],
+    'school_admin' => ['school_layout_start', 'school_layout_end'],
     'admin', 'creator' => ['admin_layout_start', 'admin_layout_end'],
-    default   => ['student_layout_start', 'student_layout_end'],
+    default        => ['student_layout_start', 'student_layout_end'],
 };
 
 $start('Notifications', $user, 'notifications.php');
