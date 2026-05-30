@@ -53,11 +53,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect('admin/questions.php');
 }
 
+$qSearch     = trim(input('q'));
+$qSubjectId  = input_int('subject');
+$qTopicId    = input_int('topic');
+$qStatus     = in_array(input('status'), ['active', 'pending', 'draft'], true) ? input('status') : '';
+$qPage       = max(1, input_int('page', 1));
+$qPerPage    = 20;
+$qOffset     = ($qPage - 1) * $qPerPage;
+
+$qWhere  = [];
+$qParams = [];
+if ($qSearch !== '') {
+    $qWhere[]  = 'q.question_text LIKE ?';
+    $qParams[] = '%' . $qSearch . '%';
+}
+if ($qSubjectId > 0) {
+    $qWhere[]  = 'q.subject_id = ?';
+    $qParams[] = $qSubjectId;
+}
+if ($qTopicId > 0) {
+    $qWhere[]  = 'q.topic_id = ?';
+    $qParams[] = $qTopicId;
+}
+if ($qStatus !== '') {
+    $qWhere[]  = 'q.status = ?';
+    $qParams[] = $qStatus;
+}
+$qWhereSql = $qWhere ? 'WHERE ' . implode(' AND ', $qWhere) : '';
+
+$qTotal = (int) (db_one("SELECT COUNT(*) c FROM questions q $qWhereSql", $qParams)['c'] ?? 0);
+$qPages = max(1, (int) ceil($qTotal / $qPerPage));
+if ($qPage > $qPages) { $qPage = $qPages; $qOffset = ($qPage - 1) * $qPerPage; }
+
 $rows = db_all(
-    'SELECT q.*, s.name AS subject, t.name AS topic FROM questions q
+    "SELECT q.*, s.name AS subject, t.name AS topic FROM questions q
      JOIN subjects s ON s.id = q.subject_id LEFT JOIN topics t ON t.id = q.topic_id
-     ORDER BY q.id DESC LIMIT 100'
+     $qWhereSql
+     ORDER BY q.id DESC
+     LIMIT $qPerPage OFFSET $qOffset",
+    $qParams
 );
+
+function questions_link(array $overrides = []): string
+{
+    global $qSearch, $qSubjectId, $qTopicId, $qStatus, $qPage;
+    $args = array_merge(['q' => $qSearch, 'subject' => $qSubjectId, 'topic' => $qTopicId, 'status' => $qStatus, 'page' => $qPage], $overrides);
+    $args = array_filter($args, fn($v) => $v !== '' && $v !== null && $v !== 0);
+    return url('admin/questions.php' . ($args ? '?' . http_build_query($args) : ''));
+}
 
 admin_layout_start('Questions', $admin, 'questions.php');
 ?>
@@ -115,13 +158,41 @@ admin_layout_start('Questions', $admin, 'questions.php');
 </div>
 
 <div class="card" style="margin-top:18px">
-  <h3>Recent questions</h3>
-  <table class="table"><thead><tr><th>#</th><th>Question</th><th>Subject</th><th>Type</th><th>Status</th><th></th></tr></thead><tbody>
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+    <h3 style="margin:0">Questions <span class="muted" style="font-size:14px">(<?= $qTotal ?>)</span></h3>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <a class="btn btn--sm <?= $qStatus === '' ? '' : 'btn--ghost' ?>" href="<?= e(questions_link(['status' => '', 'page' => 1])) ?>">All</a>
+      <a class="btn btn--sm <?= $qStatus === 'active' ? '' : 'btn--ghost' ?>" href="<?= e(questions_link(['status' => 'active', 'page' => 1])) ?>">Active</a>
+      <a class="btn btn--sm <?= $qStatus === 'pending' ? '' : 'btn--ghost' ?>" href="<?= e(questions_link(['status' => 'pending', 'page' => 1])) ?>">Pending</a>
+      <a class="btn btn--sm <?= $qStatus === 'draft' ? '' : 'btn--ghost' ?>" href="<?= e(questions_link(['status' => 'draft', 'page' => 1])) ?>">Draft</a>
+    </div>
+  </div>
+  <form method="get" style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+    <select name="subject" class="input" style="max-width:200px" onchange="this.form.submit()">
+      <option value="">All subjects</option>
+      <?php foreach ($subjects as $s): ?>
+        <option value="<?= (int)$s['id'] ?>" <?= $qSubjectId === (int)$s['id'] ? 'selected' : '' ?>><?= e($s['name']) ?></option>
+      <?php endforeach; ?>
+    </select>
+    <select name="topic" class="input" style="max-width:220px" onchange="this.form.submit()">
+      <option value="">All topics</option>
+      <?php foreach ($topics as $t): if ($qSubjectId > 0 && (int)$t['subject_id'] !== $qSubjectId) continue; ?>
+        <option value="<?= (int)$t['id'] ?>" <?= $qTopicId === (int)$t['id'] ? 'selected' : '' ?>><?= e($t['name']) ?></option>
+      <?php endforeach; ?>
+    </select>
+    <?php if ($qStatus !== ''): ?><input type="hidden" name="status" value="<?= e($qStatus) ?>"><?php endif; ?>
+    <input class="input" name="q" placeholder="Search question text" value="<?= e($qSearch) ?>" style="flex:1;min-width:180px">
+    <button class="btn btn--sm">Search</button>
+    <?php if ($qSearch !== '' || $qSubjectId > 0 || $qTopicId > 0 || $qStatus !== ''): ?>
+      <a class="btn btn--sm btn--ghost" href="<?= e(questions_link(['q' => '', 'subject' => 0, 'topic' => 0, 'status' => '', 'page' => 1])) ?>">Clear</a>
+    <?php endif; ?>
+  </form>
+  <table class="table"><thead><tr><th>#</th><th>Question</th><th>Subject / Topic</th><th>Type</th><th>Status</th><th></th></tr></thead><tbody>
   <?php foreach ($rows as $q): ?>
     <tr>
       <td><?= (int)$q['id'] ?></td>
-      <td><?= e(mb_substr($q['question_text'], 0, 60)) ?></td>
-      <td class="muted"><?= e($q['subject']) ?></td>
+      <td><?= e(mb_substr($q['question_text'], 0, 80)) ?></td>
+      <td class="muted"><?= e($q['subject']) ?><?= $q['topic'] ? '<br><span style="font-size:12px">' . e($q['topic']) . '</span>' : '' ?></td>
       <td><span class="badge"><?= e($q['type']) ?></span></td>
       <td><span class="badge <?= $q['status'] === 'active' ? 'badge--good' : 'badge--warn' ?>"><?= e($q['status']) ?></span></td>
       <td>
@@ -134,7 +205,27 @@ admin_layout_start('Questions', $admin, 'questions.php');
       </td>
     </tr>
   <?php endforeach; ?>
+  <?php if (!$rows): ?><tr><td colspan="6" class="muted">No questions match these filters.</td></tr><?php endif; ?>
   </tbody></table>
+
+  <?php if ($qPages > 1): ?>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:10px;flex-wrap:wrap">
+      <span class="muted" style="font-size:13px">Page <?= $qPage ?> of <?= $qPages ?> · <?= $qTotal ?> total</span>
+      <div style="display:flex;gap:6px">
+        <?php if ($qPage > 1): ?>
+          <a class="btn btn--sm btn--ghost" href="<?= e(questions_link(['page' => 1])) ?>">« First</a>
+          <a class="btn btn--sm btn--ghost" href="<?= e(questions_link(['page' => $qPage - 1])) ?>">‹ Prev</a>
+        <?php endif; ?>
+        <?php for ($p = max(1, $qPage - 2); $p <= min($qPages, $qPage + 2); $p++): ?>
+          <a class="btn btn--sm <?= $p === $qPage ? '' : 'btn--ghost' ?>" href="<?= e(questions_link(['page' => $p])) ?>"><?= $p ?></a>
+        <?php endfor; ?>
+        <?php if ($qPage < $qPages): ?>
+          <a class="btn btn--sm btn--ghost" href="<?= e(questions_link(['page' => $qPage + 1])) ?>">Next ›</a>
+          <a class="btn btn--sm btn--ghost" href="<?= e(questions_link(['page' => $qPages])) ?>">Last »</a>
+        <?php endif; ?>
+      </div>
+    </div>
+  <?php endif; ?>
 </div>
 <script>
   var typeSel = document.getElementById('typeSel');
