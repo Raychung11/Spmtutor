@@ -96,6 +96,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ];
                 break;
 
+            case 'schools':
+                require_once __DIR__ . '/../cron/seed_schools.php';
+                $r = seed_schools_run();
+                $output = [
+                    'title' => 'Klang Valley schools seeded',
+                    'lines' => [
+                        'Created: ' . $r['created'],
+                        'Already present (kept): ' . $r['kept'],
+                        'Total in catalog: ' . $r['total'],
+                        'Priority targets in catalog: ' . $r['priority'] . ' (of which ' . $r['priority_created'] . ' were just created)',
+                    ],
+                    'kind'  => 'success',
+                ];
+                break;
+
             case 'migrations':
                 $applied = applied_migration_set();
                 $cfg = require __DIR__ . '/../config/db_config.php';
@@ -139,6 +154,7 @@ $seeders = [
     ['key' => 'migrations',     'name' => 'Run database migrations', 'desc' => 'Apply any pending sql/migrations/*.sql files (e.g. phase4, phase5, phase6 school portal, phase7 invitations, phase8 leads). Each file runs at most once. Tracks state in an applied_migrations table.', 'has_force' => true],
     ['key' => 'courses',        'name' => 'Seed courses',         'desc' => 'Add the topics, skills and MCQs from the course catalog (Math, Add Maths, Physics, Chemistry, Biology, English, BM). Idempotent — already-present items are skipped.'],
     ['key' => 'demo_logins',    'name' => 'Demo logins (5 roles)','desc' => 'Create one demo account per role (student, parent, teacher, school admin, platform admin) with predictable credentials and sensible relationships.'],
+    ['key' => 'schools',        'name' => 'Klang Valley schools',  'desc' => 'Seed ~100 SMK secondary schools across KL, PJ, Shah Alam, Subang, Klang, Kajang, Cheras, Puchong, Bangi, Cyberjaya and Putrajaya. Idempotent — schools already present (by name) are skipped.'],
     ['key' => 'demo_data',      'name' => 'Demo data (rich)',     'desc' => 'Populate sample students with attempts, subscriptions, a class, a Snap & Check marking and parent reports so dashboards look alive.', 'has_force' => true],
     ['key' => 'weekly_reports', 'name' => 'Generate weekly reports','desc' => 'Generate this week\'s AI parent report for every active student.'],
     ['key' => 'reminders',      'name' => 'Send study reminders', 'desc' => 'Notify students who have not practised yet today (in-app + WhatsApp if configured).'],
