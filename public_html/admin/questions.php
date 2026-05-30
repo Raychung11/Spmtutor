@@ -49,6 +49,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'delete') {
         db_exec('DELETE FROM questions WHERE id = ?', [input_int('id')]);
         flash('success', 'Question deleted.');
+    } elseif ($action === 'approve') {
+        db_exec("UPDATE questions SET status = 'active' WHERE id = ?", [input_int('id')]);
+        flash('success', 'Question approved and is now live.');
     }
     redirect('admin/questions.php');
 }
@@ -195,8 +198,16 @@ admin_layout_start('Questions', $admin, 'questions.php');
       <td class="muted"><?= e($q['subject']) ?><?= $q['topic'] ? '<br><span style="font-size:12px">' . e($q['topic']) . '</span>' : '' ?></td>
       <td><span class="badge"><?= e($q['type']) ?></span></td>
       <td><span class="badge <?= $q['status'] === 'active' ? 'badge--good' : 'badge--warn' ?>"><?= e($q['status']) ?></span></td>
-      <td>
-        <form method="post" onsubmit="return confirm('Delete this question?')">
+      <td style="white-space:nowrap">
+        <?php if ($q['status'] === 'pending'): ?>
+          <form method="post" style="display:inline">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="approve">
+            <input type="hidden" name="id" value="<?= (int)$q['id'] ?>">
+            <button class="btn btn--sm">Approve</button>
+          </form>
+        <?php endif; ?>
+        <form method="post" style="display:inline" onsubmit="return confirm('Delete this question?')">
           <?= csrf_field() ?>
           <input type="hidden" name="action" value="delete">
           <input type="hidden" name="id" value="<?= (int)$q['id'] ?>">

@@ -1,0 +1,227 @@
+<?php
+/**
+ * AI question generation with per-subject prompts + two-pass critique.
+ *
+ * - subject_ai_default(subject) composes a default prompt from the subject's
+ *   structured fields (exam board, language, type, notes).
+ * - subject_ai_effective(subject) returns the subject's saved ai_prompt
+ *   override if set, otherwise the default.
+ * - generate_questions_for_topic($topicId, $count, $difficulty) calls the
+ *   LLM in two passes (generate + critique) and inserts the survivors as
+ *   `pending` rows in `questions` (+ options for MCQs).
+ */
+declare(strict_types=1);
+
+require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/ai.php';
+
+/** Default subject types the structured editor recognises. */
+function subject_ai_types(): array
+{
+    return [
+        'math'       => 'Mathematics',
+        'science'    => 'Science (Physics / Chemistry / Biology)',
+        'language'   => 'Language',
+        'history'    => 'History (Sejarah / Geografi)',
+        'religious'  => 'Religious / Moral',
+        'commerce'   => 'Commerce / Accounting',
+        'technology' => 'Technology / Computer Science',
+        'general'    => 'General',
+    ];
+}
+
+/** Compose the default per-subject system prompt from its structured fields. */
+function subject_ai_default(array $subject): string
+{
+    $name  = $subject['name'] ?? 'this subject';
+    $board = trim((string) ($subject['ai_exam_board'] ?? '')) ?: 'Malaysian SPM (KSSM syllabus)';
+    $lang  = trim((string) ($subject['ai_language'] ?? '')) ?: 'English';
+    $type  = $subject['ai_subject_type'] ?? 'general';
+    $notes = trim((string) ($subject['ai_notes'] ?? ''));
+
+    $rules = match ($type) {
+        'math'       => "Double-check every calculation step. Show working in the explanation. Use standard exam notation (^, fractions, units). Every option must be plausible (use common mistakes as distractors), and exactly one must be unambiguously correct.",
+        'science'    => "Use SI units. Stick to facts from the official syllabus. Avoid speculative or unverified claims. Cite the relevant formula in the explanation when applicable.",
+        'language'   => "Test grammar, vocabulary or comprehension as in the official syllabus. Keep options grammatically parallel. Avoid culturally insensitive phrasing.",
+        'history'    => "Use historically accurate dates, names and events from the syllabus chapter. Avoid speculation. Reference the chapter/topic in the explanation.",
+        'religious'  => "Stay strictly within the official DSKP/syllabus framing. Use respectful, neutral wording. Avoid sectarian or controversial interpretations.",
+        'commerce'   => "Use standard accounting / business definitions and Malaysian context where relevant. State assumptions clearly.",
+        'technology' => "Use current standard terminology. Avoid platform-specific quirks unless the syllabus calls them out.",
+        default      => "Be precise, factual and aligned with the syllabus.",
+    };
+
+    $prompt  = "You are an expert {$board} question writer for {$name}. Write questions in {$lang}.\n";
+    $prompt .= "Stay strictly within the official {$name} syllabus and the specific topic/skills the user gives you. ";
+    $prompt .= $rules . "\n";
+    $prompt .= "Never invent topics or facts outside the named topic. If unsure, prefer a simpler, syllabus-aligned question.";
+    if ($notes !== '') {
+        $prompt .= "\nAdditional rules for this subject: " . $notes;
+    }
+    return $prompt;
+}
+
+/** Return the saved prompt if set, else the composed default. */
+function subject_ai_effective(array $subject): string
+{
+    $custom = trim((string) ($subject['ai_prompt'] ?? ''));
+    return $custom !== '' ? $custom : subject_ai_default($subject);
+}
+
+/**
+ * Generate N MCQ drafts for a topic and insert them as `pending` questions.
+ *
+ * @return array ['inserted'=>int, 'flagged'=>int, 'errors'=>string[]]
+ */
+function generate_questions_for_topic(int $topicId, int $count, string $difficulty = 'mixed', bool $critique = true): array
+{
+    $count = max(1, min(20, $count));
+    $topic = db_one(
+        'SELECT t.*, s.id AS subject_id, s.name AS subject, s.ai_prompt, s.ai_subject_type, s.ai_exam_board, s.ai_language, s.ai_notes
+         FROM topics t JOIN subjects s ON s.id = t.subject_id WHERE t.id = ?',
+        [$topicId]
+    );
+    if (!$topic) {
+        return ['inserted' => 0, 'flagged' => 0, 'errors' => ['Topic not found.']];
+    }
+    if (!ai_enabled()) {
+        return ['inserted' => 0, 'flagged' => 0, 'errors' => ['AI key is not configured. Go to Admin → AI Settings.']];
+    }
+
+    $skills = db_all('SELECT name, difficulty FROM skills WHERE topic_id = ? AND status = "active"', [$topicId]);
+    $skillsList = $skills
+        ? implode("\n", array_map(fn($s) => '- ' . $s['name'] . ' (' . $s['difficulty'] . ')', $skills))
+        : '(no specific skills listed)';
+
+    $system = subject_ai_effective($topic);
+
+    $mixSpec = match ($difficulty) {
+        'easy'   => 'all easy',
+        'medium' => 'all medium',
+        'hard'   => 'all hard',
+        default  => 'a roughly even mix of easy / medium / hard',
+    };
+
+    $userPrompt = "Write {$count} multiple-choice questions for the topic \"{$topic['name']}\" "
+        . "(subject: {$topic['subject']}). Use {$mixSpec} difficulty.\n\n"
+        . ($topic['description'] ? "Topic description: " . $topic['description'] . "\n" : '')
+        . "Skills under this topic:\n{$skillsList}\n\n"
+        . "Return ONLY a JSON array. Each element must be an object with these exact keys:\n"
+        . "  - question (string)\n"
+        . "  - options (array of exactly 4 strings)\n"
+        . "  - correct_index (integer 0-3)\n"
+        . "  - explanation (string, 1-3 sentences explaining why the correct answer is correct)\n"
+        . "  - difficulty (\"easy\", \"medium\" or \"hard\")\n"
+        . "No prose before or after the JSON.";
+
+    try {
+        $raw = ai_chat($system, [['role' => 'user', 'content' => $userPrompt]], 0.4);
+    } catch (Throwable $e) {
+        return ['inserted' => 0, 'flagged' => 0, 'errors' => ['AI call failed: ' . $e->getMessage()]];
+    }
+
+    $draft = parse_questions_json($raw);
+    if (!$draft) {
+        return ['inserted' => 0, 'flagged' => 0, 'errors' => ['AI returned unparseable JSON. First 200 chars: ' . mb_substr($raw, 0, 200)]];
+    }
+
+    // Optional second pass: critique each draft and keep a flag on suspect ones.
+    $flagged = [];
+    if ($critique) {
+        foreach ($draft as $idx => $q) {
+            $critic = critique_question($system, $q);
+            if ($critic['ok'] === false) {
+                $flagged[$idx] = $critic['reason'];
+            }
+        }
+    }
+
+    $inserted = 0;
+    $errors   = [];
+    foreach ($draft as $idx => $q) {
+        if (!isset($q['question'], $q['options']) || !is_array($q['options']) || count($q['options']) !== 4) {
+            $errors[] = "Draft #$idx skipped: missing/invalid fields.";
+            continue;
+        }
+        $correct = (int) ($q['correct_index'] ?? 0);
+        if ($correct < 0 || $correct > 3) {
+            $errors[] = "Draft #$idx skipped: correct_index out of range.";
+            continue;
+        }
+        $diff = in_array($q['difficulty'] ?? '', ['easy', 'medium', 'hard'], true) ? $q['difficulty'] : 'medium';
+        $expl = (string) ($q['explanation'] ?? '');
+        if (isset($flagged[$idx])) {
+            $expl .= "\n\n[AI critique flagged this draft: " . $flagged[$idx] . "]";
+        }
+
+        $qid = db_exec(
+            'INSERT INTO questions (subject_id, topic_id, type, difficulty, question_text, explanation, marks, status)
+             VALUES (?,?,?,?,?,?,?,?)',
+            [(int) $topic['subject_id'], $topicId, 'mcq', $diff, (string) $q['question'], $expl, 1, 'pending']
+        );
+        foreach (array_values($q['options']) as $i => $opt) {
+            db_exec(
+                'INSERT INTO question_options (question_id, label, option_text, is_correct, sort_order)
+                 VALUES (?,?,?,?,?)',
+                [$qid, chr(65 + $i), (string) $opt, $i === $correct ? 1 : 0, $i + 1]
+            );
+        }
+        $inserted++;
+    }
+
+    return ['inserted' => $inserted, 'flagged' => count($flagged), 'errors' => $errors];
+}
+
+/** Second-pass AI critic. Asks the model to verify the answer & options. */
+function critique_question(string $subjectSystem, array $draft): array
+{
+    $payload = json_encode([
+        'question'      => $draft['question']      ?? '',
+        'options'       => $draft['options']       ?? [],
+        'correct_index' => $draft['correct_index'] ?? null,
+        'explanation'   => $draft['explanation']   ?? '',
+    ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+
+    $criticSystem = $subjectSystem . "\n\nYou are now acting as a strict, skeptical reviewer. Your job is to spot errors, ambiguities, and syllabus mismatches in a draft question. Never invent context; rely only on standard syllabus knowledge.";
+    $criticUser = "Review this draft MCQ. Verify the maths/facts, that exactly one option is unambiguously correct, that distractors are plausible, and that the explanation is consistent.\n\nDraft:\n{$payload}\n\n"
+        . "Reply ONLY with a JSON object: {\"ok\": true} if the draft is good, or {\"ok\": false, \"reason\": \"short reason\"} if not.";
+
+    try {
+        $resp = ai_chat($criticSystem, [['role' => 'user', 'content' => $criticUser]], 0.0);
+    } catch (Throwable $e) {
+        return ['ok' => false, 'reason' => 'critic call failed: ' . $e->getMessage()];
+    }
+    $data = parse_first_json_object($resp);
+    if (!is_array($data)) {
+        return ['ok' => false, 'reason' => 'critic returned unparseable JSON'];
+    }
+    return [
+        'ok'     => (bool) ($data['ok'] ?? false),
+        'reason' => (string) ($data['reason'] ?? 'unspecified'),
+    ];
+}
+
+/** Extract the first JSON object from a free-form AI reply. */
+function parse_first_json_object(string $text): ?array
+{
+    $start = strpos($text, '{');
+    $end   = strrpos($text, '}');
+    if ($start === false || $end === false || $end <= $start) {
+        return null;
+    }
+    $json = substr($text, $start, $end - $start + 1);
+    $data = json_decode($json, true);
+    return is_array($data) ? $data : null;
+}
+
+/** Extract the first JSON array (of question objects) from a free-form reply. */
+function parse_questions_json(string $text): ?array
+{
+    $start = strpos($text, '[');
+    $end   = strrpos($text, ']');
+    if ($start === false || $end === false || $end <= $start) {
+        return null;
+    }
+    $json = substr($text, $start, $end - $start + 1);
+    $data = json_decode($json, true);
+    return is_array($data) ? $data : null;
+}

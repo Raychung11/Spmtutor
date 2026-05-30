@@ -133,6 +133,7 @@ admin_layout_start('Topics', $admin, 'topics.php');
           <td style="width:100px"><span class="muted">Skills</span><br><?= (int)$t['skill_count'] ?></td>
           <td style="width:100px"><span class="muted">Questions</span><br><?= (int)$t['question_count'] ?></td>
           <td style="white-space:nowrap;width:1%">
+            <a class="btn btn--sm" href="<?= url('admin/ai_generate.php?topic_id=' . (int)$t['id']) ?>" title="Generate questions with AI">🤖 Generate</a>
             <a class="btn btn--sm btn--ghost" href="<?= e(topics_link(['edit' => (int)$t['id']])) ?>">Edit</a>
             <form method="post" style="display:inline" onsubmit="return confirm('Delete this topic? Its skills and questions will lose this link.')">
               <?= csrf_field() ?>
