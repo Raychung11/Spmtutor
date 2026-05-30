@@ -111,6 +111,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ];
                 break;
 
+            case 'subjects':
+                require_once __DIR__ . '/../cron/seed_subjects.php';
+                $r = seed_subjects_run();
+                if (($r['status'] ?? '') === 'no_level') {
+                    $output = ['title' => 'SPM subjects', 'lines' => [$r['message']], 'kind' => 'error'];
+                } else {
+                    $output = [
+                        'title' => 'SPM subjects seeded',
+                        'lines' => [
+                            'Created: ' . $r['created'],
+                            'Already present (kept): ' . $r['kept'],
+                            'Total in catalog: ' . $r['total'],
+                        ],
+                        'kind'  => 'success',
+                    ];
+                }
+                break;
+
             case 'migrations':
                 $applied = applied_migration_set();
                 $cfg = require __DIR__ . '/../config/db_config.php';
@@ -155,6 +173,7 @@ $seeders = [
     ['key' => 'courses',        'name' => 'Seed courses',         'desc' => 'Add the topics, skills and MCQs from the course catalog (Math, Add Maths, Physics, Chemistry, Biology, English, BM). Idempotent — already-present items are skipped.'],
     ['key' => 'demo_logins',    'name' => 'Demo logins (5 roles)','desc' => 'Create one demo account per role (student, parent, teacher, school admin, platform admin) with predictable credentials and sensible relationships.'],
     ['key' => 'schools',        'name' => 'Klang Valley schools',  'desc' => 'Seed ~100 SMK secondary schools across KL, PJ, Shah Alam, Subang, Klang, Kajang, Cheras, Puchong, Bangi, Cyberjaya and Putrajaya. Idempotent — schools already present (by name) are skipped.'],
+    ['key' => 'subjects',       'name' => 'SPM subjects',          'desc' => 'Add the missing SPM subjects beyond the original 7 (Sejarah, Pendidikan Islam, Pendidikan Moral, Perakaunan, Perniagaan, Ekonomi, Sains Komputer, RBT, Sains, Geografi, PSV, three languages, three Islamic electives). Idempotent — existing slugs/names are kept.'],
     ['key' => 'demo_data',      'name' => 'Demo data (rich)',     'desc' => 'Populate sample students with attempts, subscriptions, a class, a Snap & Check marking and parent reports so dashboards look alive.', 'has_force' => true],
     ['key' => 'weekly_reports', 'name' => 'Generate weekly reports','desc' => 'Generate this week\'s AI parent report for every active student.'],
     ['key' => 'reminders',      'name' => 'Send study reminders', 'desc' => 'Notify students who have not practised yet today (in-app + WhatsApp if configured).'],
