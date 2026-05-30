@@ -52,6 +52,46 @@ function ai_enabled(): bool
     return ai_cfg()['key'] !== '';
 }
 
+/** Daily caps (per user and total) for AI calls. Editable in Admin → AI Settings. */
+function ai_daily_caps(): array
+{
+    return [
+        'per_user' => (int) (setting_get('ai_cap_per_user', '200') ?? '200'),
+        'global'   => (int) (setting_get('ai_cap_global',   '2000') ?? '2000'),
+    ];
+}
+
+/** Returns ['ok'=>bool, 'used_user'=>int, 'used_global'=>int, 'cap_user'=>int, 'cap_global'=>int, 'reason'=>string]. */
+function ai_quota_status(?int $userId): array
+{
+    $caps = ai_daily_caps();
+    try {
+        $userUsed = $userId
+            ? (int) (db_one('SELECT COUNT(*) c FROM ai_usage_log WHERE user_id = ? AND DATE(created_at) = CURDATE()', [$userId])['c'] ?? 0)
+            : 0;
+        $globalUsed = (int) (db_one('SELECT COUNT(*) c FROM ai_usage_log WHERE DATE(created_at) = CURDATE()')['c'] ?? 0);
+    } catch (Throwable $e) {
+        // Migration not yet applied — fail open so the platform still works.
+        return ['ok' => true, 'used_user' => 0, 'used_global' => 0, 'cap_user' => $caps['per_user'], 'cap_global' => $caps['global'], 'reason' => 'usage table missing'];
+    }
+    if ($userId && $userUsed >= $caps['per_user']) {
+        return ['ok' => false, 'used_user' => $userUsed, 'used_global' => $globalUsed, 'cap_user' => $caps['per_user'], 'cap_global' => $caps['global'], 'reason' => 'per-user daily cap reached'];
+    }
+    if ($globalUsed >= $caps['global']) {
+        return ['ok' => false, 'used_user' => $userUsed, 'used_global' => $globalUsed, 'cap_user' => $caps['per_user'], 'cap_global' => $caps['global'], 'reason' => 'platform daily cap reached'];
+    }
+    return ['ok' => true, 'used_user' => $userUsed, 'used_global' => $globalUsed, 'cap_user' => $caps['per_user'], 'cap_global' => $caps['global'], 'reason' => ''];
+}
+
+function ai_log_usage(?int $userId, string $kind = 'chat'): void
+{
+    try {
+        db_exec('INSERT INTO ai_usage_log (user_id, kind) VALUES (?, ?)', [$userId, mb_substr($kind, 0, 40)]);
+    } catch (Throwable $e) {
+        // Logging failure should never break the chat flow.
+    }
+}
+
 /** Load an editable system prompt by template code. */
 function ai_prompt(string $code): array
 {
@@ -76,12 +116,26 @@ function ai_chat(string $systemPrompt, array $messages, float $temperature = 0.4
     if ($cfg['key'] === '') {
         return ai_fallback($messages);
     }
+
+    // Cost guardrail: per-user + global daily caps.
+    $uid = null;
+    if (function_exists('current_user')) {
+        $u = current_user();
+        $uid = $u ? (int) $u['id'] : null;
+    }
+    $quota = ai_quota_status($uid);
+    if (!$quota['ok']) {
+        return "AI daily cap reached ({$quota['reason']}: {$quota['used_user']}/{$quota['cap_user']} per-user, {$quota['used_global']}/{$quota['cap_global']} platform-wide). Please try again tomorrow or raise the cap in Admin → AI Settings.";
+    }
+
     $model = $model ?: $cfg['model'];
 
     try {
-        return $cfg['provider'] === 'openai'
+        $reply = $cfg['provider'] === 'openai'
             ? ai_call_openai($systemPrompt, $messages, $temperature, $model, $cfg['key'], $cfg['base'])
             : ai_call_anthropic($systemPrompt, $messages, $temperature, $model, $cfg['key'], $cfg['base']);
+        ai_log_usage($uid, 'chat');
+        return $reply;
     } catch (Throwable $e) {
         if (APP_DEBUG) {
             return 'AI error: ' . $e->getMessage();

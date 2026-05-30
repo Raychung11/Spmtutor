@@ -46,6 +46,8 @@
       body.set('message', text);
       body.set('session_id', sessionField.value || '');
       if (subject) body.set('subject_id', subject.value || '');
+      var lang = document.getElementById('langSel');
+      if (lang && lang.value) body.set('lang', lang.value);
 
       fetch(apiUrl, { method: 'POST', body: body, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
         .then(function (r) { return r.json(); })

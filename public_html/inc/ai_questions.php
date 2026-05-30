@@ -200,6 +200,122 @@ function critique_question(string $subjectSystem, array $draft): array
     ];
 }
 
+/**
+ * Map a subject slug to a sensible (type, language) pair, used by the
+ * "Apply defaults to all subjects" action so each subject gets a
+ * tailored default prompt without manual editing.
+ */
+function subject_default_traits(string $slug): array
+{
+    return match ($slug) {
+        'mathematics', 'add-maths'                            => ['math',       'English'],
+        'physics', 'chemistry', 'biology'                     => ['science',    'English'],
+        'sains'                                               => ['science',    'Bahasa Melayu'],
+        'english'                                             => ['language',   'English'],
+        'bahasa-melayu'                                       => ['language',   'Bahasa Melayu'],
+        'bahasa-cina'                                         => ['language',   'Chinese'],
+        'bahasa-tamil'                                        => ['language',   'Tamil'],
+        'bahasa-arab'                                         => ['language',   'Arabic'],
+        'sejarah'                                             => ['history',    'Bahasa Melayu'],
+        'geografi'                                            => ['history',    'Bahasa Melayu'],
+        'pendidikan-islam', 'tasawwur-islam', 'pqs', 'psi'    => ['religious',  'Bahasa Melayu'],
+        'pendidikan-moral'                                    => ['religious',  'Bahasa Melayu'],
+        'perakaunan', 'perniagaan', 'ekonomi'                 => ['commerce',   'Bahasa Melayu'],
+        'sains-komputer'                                      => ['technology', 'English'],
+        'rbt'                                                 => ['technology', 'Bahasa Melayu'],
+        'psv'                                                 => ['general',    'Bahasa Melayu'],
+        default                                               => ['general',    'English'],
+    };
+}
+
+/**
+ * Apply the composed default prompt to every subject. Skips subjects that
+ * already have a custom ai_prompt unless $force is true.
+ *
+ * @return array ['updated'=>int, 'kept'=>int]
+ */
+function apply_default_subject_prompts(bool $force = false): array
+{
+    $updated = 0;
+    $kept    = 0;
+    foreach (db_all('SELECT * FROM subjects') as $s) {
+        if (!$force && trim((string) ($s['ai_prompt'] ?? '')) !== '') {
+            $kept++;
+            continue;
+        }
+        [$type, $lang] = subject_default_traits((string) $s['slug']);
+        $row = array_merge($s, [
+            'ai_subject_type' => $type,
+            'ai_language'     => $lang,
+            'ai_exam_board'   => $s['ai_exam_board'] ?: 'Malaysian SPM (KSSM)',
+        ]);
+        $prompt = subject_ai_default($row);
+        db_exec(
+            'UPDATE subjects SET ai_subject_type = ?, ai_exam_board = ?, ai_language = ?, ai_prompt = ? WHERE id = ?',
+            [$type, $row['ai_exam_board'], $lang, $prompt, (int) $s['id']]
+        );
+        $updated++;
+    }
+    return ['updated' => $updated, 'kept' => $kept];
+}
+
+/** Generate skills for a topic and insert them. Returns counts. */
+function generate_skills_for_topic(int $topicId, int $count): array
+{
+    $count = max(1, min(15, $count));
+    $topic = db_one(
+        'SELECT t.*, s.name AS subject, s.ai_prompt, s.ai_subject_type, s.ai_exam_board, s.ai_language, s.ai_notes
+         FROM topics t JOIN subjects s ON s.id = t.subject_id WHERE t.id = ?',
+        [$topicId]
+    );
+    if (!$topic) {
+        return ['inserted' => 0, 'errors' => ['Topic not found.']];
+    }
+    if (!ai_enabled()) {
+        return ['inserted' => 0, 'errors' => ['AI key is not configured. Go to Admin → AI Settings.']];
+    }
+    $system = subject_ai_effective($topic);
+    $userPrompt = "List {$count} concrete, testable skills students need to master the topic \"{$topic['name']}\" "
+        . "(subject: {$topic['subject']}). Each skill should be specific enough to test in one question.\n\n"
+        . ($topic['description'] ? "Topic description: {$topic['description']}\n" : '')
+        . "Return ONLY a JSON array. Each element must be an object with these exact keys:\n"
+        . "  - name (string, 3-80 chars, action-style e.g. \"Solve linear equations\")\n"
+        . "  - difficulty (\"easy\", \"medium\" or \"hard\")\n"
+        . "  - description (string, 1 sentence)\n"
+        . "No prose before or after the JSON.";
+
+    try {
+        $raw = ai_chat($system, [['role' => 'user', 'content' => $userPrompt]], 0.3);
+    } catch (Throwable $e) {
+        return ['inserted' => 0, 'errors' => ['AI call failed: ' . $e->getMessage()]];
+    }
+    $skills = parse_questions_json($raw);
+    if (!$skills) {
+        return ['inserted' => 0, 'errors' => ['AI returned unparseable JSON. First 200 chars: ' . mb_substr($raw, 0, 200)]];
+    }
+
+    $inserted = 0;
+    $errors   = [];
+    foreach ($skills as $i => $sk) {
+        $name = trim((string) ($sk['name'] ?? ''));
+        if ($name === '') {
+            $errors[] = "Draft #$i skipped: empty name.";
+            continue;
+        }
+        if (db_one('SELECT id FROM skills WHERE topic_id = ? AND name = ?', [$topicId, $name])) {
+            continue; // dedupe
+        }
+        $diff = in_array($sk['difficulty'] ?? '', ['easy', 'medium', 'hard'], true) ? $sk['difficulty'] : 'medium';
+        $desc = (string) ($sk['description'] ?? '');
+        db_exec(
+            'INSERT INTO skills (topic_id, name, difficulty, description) VALUES (?,?,?,?)',
+            [$topicId, mb_substr($name, 0, 190), $diff, $desc]
+        );
+        $inserted++;
+    }
+    return ['inserted' => $inserted, 'errors' => $errors];
+}
+
 /** Extract the first JSON object from a free-form AI reply. */
 function parse_first_json_object(string $text): ?array
 {

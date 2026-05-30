@@ -21,6 +21,11 @@ student_layout_start('AI Tutor', $user, 'tutor.php');
             <option value="<?= (int)$s['id'] ?>"><?= e($s['name']) ?></option>
           <?php endforeach; ?>
         </select>
+        <select id="langSel" class="input" style="max-width:170px">
+          <option value="">Auto language</option>
+          <option value="en">Reply in English</option>
+          <option value="bm">Balas dalam BM</option>
+        </select>
         <span class="muted" style="font-size:13px">LulusAI explains step-by-step.</span>
       </div>
       <div id="chatLog" class="chat__log">

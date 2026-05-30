@@ -26,6 +26,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('admin/ai_settings.php');
     }
 
+    if ($action === 'save_caps') {
+        setting_set('ai_cap_per_user', (string) max(0, input_int('cap_per_user')));
+        setting_set('ai_cap_global',   (string) max(0, input_int('cap_global')));
+        flash('success', 'Daily caps updated.');
+        redirect('admin/ai_settings.php');
+    }
+
+    if ($action === 'apply_defaults') {
+        require_once __DIR__ . '/../inc/ai_questions.php';
+        $force = input('force_overwrite') === '1';
+        $touched = apply_default_subject_prompts($force);
+        flash('success', "Applied defaults to {$touched['updated']} subjects (skipped {$touched['kept']} that already had a custom prompt).");
+        redirect('admin/ai_settings.php');
+    }
+
     if ($action === 'test') {
         if (!ai_enabled()) {
             flash('info', 'No API key configured — the tutor runs in offline demo mode.');
@@ -89,6 +104,36 @@ admin_layout_start('AI Settings', $admin, 'ai_settings.php');
     <button class="btn btn--ghost">Run AI test</button>
   </form>
 </div>
+
+<div class="card" style="margin-top:18px">
+  <h3>Daily cost guardrails</h3>
+  <?php $caps = ai_daily_caps(); $q = ai_quota_status((int) $admin['id']); ?>
+  <p class="muted">Today's usage: <strong><?= $q['used_global'] ?></strong> calls platform-wide (cap <?= $caps['global'] ?>) · you personally <strong><?= $q['used_user'] ?></strong> (cap <?= $caps['per_user'] ?>).</p>
+  <form method="post">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="save_caps">
+    <div class="grid grid--2">
+      <div class="field"><label>Per-user daily cap</label><input class="input" type="number" min="0" name="cap_per_user" value="<?= $caps['per_user'] ?>"></div>
+      <div class="field"><label>Platform-wide daily cap</label><input class="input" type="number" min="0" name="cap_global" value="<?= $caps['global'] ?>"></div>
+    </div>
+    <p class="muted" style="font-size:13px;margin:0 0 10px">Hitting a cap returns a friendly message and stops the call before it hits your provider. Caps reset at midnight server time.</p>
+    <button class="btn btn--ghost">Save caps</button>
+  </form>
+</div>
+
+<div class="card" style="margin-top:18px">
+  <h3>Apply default prompts to all subjects</h3>
+  <p class="muted">Picks a sensible subject type / language for each of the <?= (int)(db_one('SELECT COUNT(*) c FROM subjects')['c'] ?? 0) ?> subjects and writes the composed default into <code>ai_prompt</code>. Safer than editing each subject by hand.</p>
+  <form method="post" onsubmit="return confirm('Apply default AI prompts now?')">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="apply_defaults">
+    <label class="muted" style="display:inline-flex;gap:6px;align-items:center;font-size:13px">
+      <input type="checkbox" name="force_overwrite" value="1"> Overwrite subjects that already have a custom prompt
+    </label>
+    <p><button class="btn">Apply defaults</button></p>
+  </form>
+</div>
+
 <p class="muted" style="margin-top:14px">Security note: the key is stored in the database (not web-accessible). Prefer a server environment variable (<code>AI_API_KEY</code>) if you have shell/SSH access.</p>
 <?php
 admin_layout_end();

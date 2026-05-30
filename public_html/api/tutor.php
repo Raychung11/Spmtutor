@@ -60,6 +60,13 @@ if ($subjectId) {
     }
 }
 
+$lang = input('lang');
+if ($lang === 'bm') {
+    $system .= "\n\nReply entirely in Bahasa Melayu, in a warm, encouraging tone suitable for SPM students.";
+} elseif ($lang === 'en') {
+    $system .= "\n\nReply in English with clear, exam-friendly phrasing.";
+}
+
 $history = db_all('SELECT role, content FROM ai_chat_messages WHERE session_id = ? ORDER BY id ASC LIMIT 20', [$sessionId]);
 $messages = array_map(fn($m) => ['role' => $m['role'], 'content' => $m['content']], $history);
 
