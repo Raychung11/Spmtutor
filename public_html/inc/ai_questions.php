@@ -15,6 +15,59 @@ declare(strict_types=1);
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/ai.php';
 
+/**
+ * Are the phase9 per-subject AI columns present? Cached for the request.
+ * Returns false when the production DB hasn't had migrations applied yet,
+ * so callers can fall back to a minimal SELECT.
+ */
+function subject_ai_columns_present(): bool
+{
+    static $present = null;
+    if ($present !== null) {
+        return $present;
+    }
+    try {
+        $row = db_one(
+            "SELECT COUNT(*) AS n FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'subjects' AND COLUMN_NAME = 'ai_prompt'"
+        );
+        $present = (int) ($row['n'] ?? 0) > 0;
+    } catch (Throwable $e) {
+        $present = false;
+    }
+    return $present;
+}
+
+/**
+ * Fetch a topic joined with subject AI fields, tolerating an unmigrated DB.
+ * Always returns these keys (NULL when phase9 cols are missing): subject_id,
+ * subject, ai_prompt, ai_subject_type, ai_exam_board, ai_language, ai_notes.
+ */
+function fetch_topic_with_subject_ai(int $topicId): ?array
+{
+    if (subject_ai_columns_present()) {
+        return db_one(
+            'SELECT t.*, s.id AS subject_id, s.name AS subject,
+                    s.ai_prompt, s.ai_subject_type, s.ai_exam_board, s.ai_language, s.ai_notes
+             FROM topics t JOIN subjects s ON s.id = t.subject_id WHERE t.id = ?',
+            [$topicId]
+        );
+    }
+    $row = db_one(
+        'SELECT t.*, s.id AS subject_id, s.name AS subject
+         FROM topics t JOIN subjects s ON s.id = t.subject_id WHERE t.id = ?',
+        [$topicId]
+    );
+    if ($row) {
+        $row['ai_prompt']       = null;
+        $row['ai_subject_type'] = null;
+        $row['ai_exam_board']   = null;
+        $row['ai_language']     = null;
+        $row['ai_notes']        = null;
+    }
+    return $row;
+}
+
 /** Default subject types the structured editor recognises. */
 function subject_ai_types(): array
 {
@@ -75,11 +128,7 @@ function subject_ai_effective(array $subject): string
 function generate_questions_for_topic(int $topicId, int $count, string $difficulty = 'mixed', bool $critique = true): array
 {
     $count = max(1, min(20, $count));
-    $topic = db_one(
-        'SELECT t.*, s.id AS subject_id, s.name AS subject, s.ai_prompt, s.ai_subject_type, s.ai_exam_board, s.ai_language, s.ai_notes
-         FROM topics t JOIN subjects s ON s.id = t.subject_id WHERE t.id = ?',
-        [$topicId]
-    );
+    $topic = fetch_topic_with_subject_ai($topicId);
     if (!$topic) {
         return ['inserted' => 0, 'flagged' => 0, 'errors' => ['Topic not found.']];
     }
@@ -263,11 +312,7 @@ function apply_default_subject_prompts(bool $force = false): array
 function generate_skills_for_topic(int $topicId, int $count): array
 {
     $count = max(1, min(15, $count));
-    $topic = db_one(
-        'SELECT t.*, s.name AS subject, s.ai_prompt, s.ai_subject_type, s.ai_exam_board, s.ai_language, s.ai_notes
-         FROM topics t JOIN subjects s ON s.id = t.subject_id WHERE t.id = ?',
-        [$topicId]
-    );
+    $topic = fetch_topic_with_subject_ai($topicId);
     if (!$topic) {
         return ['inserted' => 0, 'errors' => ['Topic not found.']];
     }

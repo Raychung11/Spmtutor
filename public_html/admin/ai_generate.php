@@ -12,16 +12,12 @@ if (!$topicId) {
     redirect('admin/topics.php');
 }
 
-$topic = db_one(
-    'SELECT t.*, s.name AS subject, s.id AS subject_id, s.ai_prompt AS s_ai_prompt,
-            s.ai_subject_type, s.ai_exam_board, s.ai_language, s.ai_notes
-     FROM topics t JOIN subjects s ON s.id = t.subject_id WHERE t.id = ?',
-    [$topicId]
-);
+$topic = fetch_topic_with_subject_ai($topicId);
 if (!$topic) {
     flash('error', 'Topic not found.');
     redirect('admin/topics.php');
 }
+$migrationsMissing = !subject_ai_columns_present();
 
 $result = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -30,12 +26,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $diff     = in_array(input('difficulty'), ['mixed', 'easy', 'medium', 'hard'], true) ? input('difficulty') : 'mixed';
     $critique = input('critique') === '1';
     @set_time_limit(180);
-    $result = generate_questions_for_topic($topicId, $count, $diff, $critique);
+    try {
+        $result = generate_questions_for_topic($topicId, $count, $diff, $critique);
+    } catch (Throwable $e) {
+        error_log('[ai_generate] ' . $e->getMessage());
+        $result = ['inserted' => 0, 'flagged' => 0, 'errors' => ['Generation crashed: ' . $e->getMessage()]];
+    }
 }
 
-// Compose subject map for the prompt preview.
-$subjectRow = ['name' => $topic['subject'], 'ai_subject_type' => $topic['ai_subject_type'], 'ai_exam_board' => $topic['ai_exam_board'], 'ai_language' => $topic['ai_language'], 'ai_notes' => $topic['ai_notes'], 'ai_prompt' => $topic['s_ai_prompt']];
-$effectivePrompt = subject_ai_effective($subjectRow);
+$effectivePrompt = subject_ai_effective($topic);
 
 admin_layout_start('Generate questions with AI', $admin, 'topics.php');
 ?>
@@ -46,6 +45,13 @@ admin_layout_start('Generate questions with AI', $admin, 'topics.php');
   </p>
 </div>
 
+<?php if ($migrationsMissing): ?>
+  <div class="flash flash--error">
+    <strong>Database migrations are out of date.</strong> The per-subject AI columns are missing.
+    Run them from <a href="<?= url('admin/seeders.php') ?>">Admin → Seeders → Run database migrations</a>.
+    The AI will still work, but it will use a generic default prompt instead of your subject-specific one.
+  </div>
+<?php endif; ?>
 <?php if ($result): ?>
   <div class="flash flash--<?= $result['inserted'] > 0 ? 'success' : 'error' ?>">
     <strong>Generated:</strong> <?= (int)$result['inserted'] ?> questions saved as <code>pending</code>.

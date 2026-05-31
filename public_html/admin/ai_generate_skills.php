@@ -11,18 +11,24 @@ if (!$topicId) {
     flash('error', 'No topic selected.');
     redirect('admin/topics.php');
 }
-$topic = db_one('SELECT t.*, s.name AS subject, s.id AS subject_id FROM topics t JOIN subjects s ON s.id = t.subject_id WHERE t.id = ?', [$topicId]);
+$topic = fetch_topic_with_subject_ai($topicId);
 if (!$topic) {
     flash('error', 'Topic not found.');
     redirect('admin/topics.php');
 }
+$migrationsMissing = !subject_ai_columns_present();
 
 $result = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
     $count = max(1, min(15, input_int('count', 5)));
     @set_time_limit(120);
-    $result = generate_skills_for_topic($topicId, $count);
+    try {
+        $result = generate_skills_for_topic($topicId, $count);
+    } catch (Throwable $e) {
+        error_log('[ai_generate_skills] ' . $e->getMessage());
+        $result = ['inserted' => 0, 'errors' => ['Generation crashed: ' . $e->getMessage()]];
+    }
 }
 
 admin_layout_start('Generate skills with AI', $admin, 'topics.php');
@@ -34,6 +40,13 @@ admin_layout_start('Generate skills with AI', $admin, 'topics.php');
   </p>
 </div>
 
+<?php if ($migrationsMissing): ?>
+  <div class="flash flash--error">
+    <strong>Database migrations are out of date.</strong> The per-subject AI columns are missing.
+    Run them from <a href="<?= url('admin/seeders.php') ?>">Admin → Seeders → Run database migrations</a>.
+    The AI will still work, but it will use a generic default prompt instead of your subject-specific one.
+  </div>
+<?php endif; ?>
 <?php if ($result): ?>
   <div class="flash flash--<?= $result['inserted'] > 0 ? 'success' : 'error' ?>">
     <strong>Generated:</strong> <?= (int)$result['inserted'] ?> skill(s) added (duplicates skipped).
