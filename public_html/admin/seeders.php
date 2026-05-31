@@ -190,6 +190,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
 
+            case 'bm_kssm':
+                require_once __DIR__ . '/../cron/seed_bm_kssm.php';
+                $r = bm_kssm_run();
+                if (($r['status'] ?? '') !== 'ok') {
+                    $output = ['title' => 'KSSM Bahasa Melayu', 'lines' => [$r['message'] ?? 'Failed.'], 'kind' => 'error'];
+                } else {
+                    $lines = [
+                        'Topics: created ' . $r['topics_created'] . ', adopted legacy ' . $r['topics_adopted'] . ', kept ' . $r['topics_kept'] . ' (catalog ' . $r['catalog_topics'] . ')',
+                        'Subtopics: created ' . $r['subtopics_created'] . ', kept ' . $r['subtopics_kept'],
+                        'Skills: created ' . $r['skills_created'] . ', kept ' . $r['skills_kept'],
+                    ];
+                    $lines[] = $r['peribahasa_table']
+                        ? 'Peribahasa: created ' . $r['peribahasa_created'] . ', kept ' . $r['peribahasa_kept']
+                        : 'Peribahasa: table missing — run database migrations to enable.';
+                    $lines[] = 'Next: Admin → Topics, filter by Bahasa Melayu, 🤖 Qs to generate karangan / tatabahasa / KOMSAS banks.';
+                    $output = ['title' => 'KSSM Bahasa Melayu seeded', 'lines' => $lines, 'kind' => 'success'];
+                }
+                break;
+
             case 'physics_kssm':
                 require_once __DIR__ . '/../cron/seed_physics_kssm.php';
                 $r = physics_kssm_run();
@@ -279,6 +298,7 @@ $seeders = [
     ['key' => 'physics_kssm',   'name' => 'KSSM Physics (Form 4 + 5)',                'desc' => 'Seed the full KSSM SPM Physics syllabus: 15 chapters (F4: 8, F5: 7) with subtopics + starter skills, plus a Physics formula bank (kinematics, momentum, Ohm/power, transformer, pressure, half-life, photon energy …). Adopts legacy same-named topics like the original Electricity row.'],
     ['key' => 'chemistry_kssm', 'name' => 'KSSM Chemistry (Form 4 + 5)',              'desc' => 'Seed the full KSSM SPM Chemistry syllabus: 16 chapters (F4: 8, F5: 8) with subtopics + starter skills, plus a Chemistry formula bank (n=m/Mr, C=n/V, dilution, pH, percentage yield/purity, ΔH/Q=mcΔT, Q=It, n_e=Q/F …).'],
     ['key' => 'biology_kssm',   'name' => 'KSSM Biology (Form 4 + 5)',                'desc' => 'Seed the full KSSM SPM Biology syllabus: 21 chapters (F4: 11, F5: 10) with subtopics + starter skills, plus a diagram bank (animal/plant cell, heart, digestive system, nephron, xylem/phloem, monohybrid cross …) and ~60 starter flashcards. Run phase14 migration first to enable diagrams/flashcards.'],
+    ['key' => 'bm_kssm',        'name' => 'KSSM Bahasa Melayu (Form 4 + 5)',          'desc' => 'Seed the full KSSM SPM Bahasa Melayu syllabus: 14 topik (F4: 7, F5: 7) — Kemahiran Mendengar, Sistem Bahasa, Tatabahasa, Pemahaman, Rumusan, Karangan, KOMSAS, Novel — with subtopics + starter skills, plus a peribahasa / simpulan bahasa / bidalan / pepatah / cogan kata bank used by the AI Tatabahasa Trainer. Run phase15 migration first to enable the peribahasa table.'],
     ['key' => 'demo_data',      'name' => 'Demo data (rich)',     'desc' => 'Populate sample students with attempts, subscriptions, a class, a Snap & Check marking and parent reports so dashboards look alive.', 'has_force' => true],
     ['key' => 'weekly_reports', 'name' => 'Generate weekly reports','desc' => 'Generate this week\'s AI parent report for every active student.'],
     ['key' => 'reminders',      'name' => 'Send study reminders', 'desc' => 'Notify students who have not practised yet today (in-app + WhatsApp if configured).'],
