@@ -148,6 +148,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
 
+            case 'chemistry_kssm':
+                require_once __DIR__ . '/../cron/seed_chemistry_kssm.php';
+                $r = chemistry_kssm_run();
+                if (($r['status'] ?? '') !== 'ok') {
+                    $output = ['title' => 'KSSM Chemistry', 'lines' => [$r['message'] ?? 'Failed.'], 'kind' => 'error'];
+                } else {
+                    $output = [
+                        'title' => 'KSSM Chemistry seeded',
+                        'lines' => [
+                            'Topics: created ' . $r['topics_created'] . ', adopted legacy ' . $r['topics_adopted'] . ', kept ' . $r['topics_kept'] . ' (catalog ' . $r['catalog_topics'] . ')',
+                            'Subtopics: created ' . $r['subtopics_created'] . ', kept ' . $r['subtopics_kept'],
+                            'Skills: created ' . $r['skills_created'] . ', kept ' . $r['skills_kept'],
+                            'Formulas: created ' . $r['formulas_created'] . ', kept ' . $r['formulas_kept'],
+                            'Next: Admin → Topics, filter by Chemistry, 🤖 Qs to generate question banks.',
+                        ],
+                        'kind'  => 'success',
+                    ];
+                }
+                break;
+
             case 'physics_kssm':
                 require_once __DIR__ . '/../cron/seed_physics_kssm.php';
                 $r = physics_kssm_run();
@@ -235,6 +255,7 @@ $seeders = [
     ['key' => 'math_kssm',      'name' => 'KSSM Mathematics (Form 4 + 5)', 'desc' => 'Seed the full KSSM SPM Mathematics syllabus: 20 chapters across Form 4 & Form 5 with all their subtopics, plus a few starter skills. Idempotent — existing topics/subtopics matched by name are kept and just refreshed with form_level.'],
     ['key' => 'addmath_kssm',   'name' => 'KSSM Additional Mathematics (Form 4 + 5)', 'desc' => 'Seed the full KSSM SPM Additional Mathematics syllabus: 20 chapters across Form 4 & Form 5 with all their subtopics and the syllabus-defined starter skills. Idempotent.'],
     ['key' => 'physics_kssm',   'name' => 'KSSM Physics (Form 4 + 5)',                'desc' => 'Seed the full KSSM SPM Physics syllabus: 15 chapters (F4: 8, F5: 7) with subtopics + starter skills, plus a Physics formula bank (kinematics, momentum, Ohm/power, transformer, pressure, half-life, photon energy …). Adopts legacy same-named topics like the original Electricity row.'],
+    ['key' => 'chemistry_kssm', 'name' => 'KSSM Chemistry (Form 4 + 5)',              'desc' => 'Seed the full KSSM SPM Chemistry syllabus: 16 chapters (F4: 8, F5: 8) with subtopics + starter skills, plus a Chemistry formula bank (n=m/Mr, C=n/V, dilution, pH, percentage yield/purity, ΔH/Q=mcΔT, Q=It, n_e=Q/F …).'],
     ['key' => 'demo_data',      'name' => 'Demo data (rich)',     'desc' => 'Populate sample students with attempts, subscriptions, a class, a Snap & Check marking and parent reports so dashboards look alive.', 'has_force' => true],
     ['key' => 'weekly_reports', 'name' => 'Generate weekly reports','desc' => 'Generate this week\'s AI parent report for every active student.'],
     ['key' => 'reminders',      'name' => 'Send study reminders', 'desc' => 'Notify students who have not practised yet today (in-app + WhatsApp if configured).'],
