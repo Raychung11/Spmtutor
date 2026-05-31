@@ -129,6 +129,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
 
+            case 'math_kssm':
+                require_once __DIR__ . '/../cron/seed_math_kssm.php';
+                $r = math_kssm_run();
+                if (($r['status'] ?? '') !== 'ok') {
+                    $output = ['title' => 'KSSM Mathematics', 'lines' => [$r['message'] ?? 'Failed.'], 'kind' => 'error'];
+                } else {
+                    $output = [
+                        'title' => 'KSSM Mathematics seeded',
+                        'lines' => [
+                            'Topics created: ' . $r['topics_created'] . ' (kept ' . $r['topics_kept'] . ', catalog ' . $r['catalog_topics'] . ')',
+                            'Subtopics created: ' . $r['subtopics_created'] . ' (kept ' . $r['subtopics_kept'] . ')',
+                            'Starter skills created: ' . $r['skills_created'] . ' (kept ' . $r['skills_kept'] . ')',
+                            'Next: open Admin → Topics, filter by Mathematics, and use 🤖 Skills / 🤖 Qs on each row.',
+                        ],
+                        'kind'  => 'success',
+                    ];
+                }
+                break;
+
             case 'migrations':
                 $applied = applied_migration_set();
                 $cfg = require __DIR__ . '/../config/db_config.php';
@@ -174,6 +193,7 @@ $seeders = [
     ['key' => 'demo_logins',    'name' => 'Demo logins (5 roles)','desc' => 'Create one demo account per role (student, parent, teacher, school admin, platform admin) with predictable credentials and sensible relationships.'],
     ['key' => 'schools',        'name' => 'Klang Valley schools',  'desc' => 'Seed ~100 SMK secondary schools across KL, PJ, Shah Alam, Subang, Klang, Kajang, Cheras, Puchong, Bangi, Cyberjaya and Putrajaya. Idempotent — schools already present (by name) are skipped.'],
     ['key' => 'subjects',       'name' => 'SPM subjects',          'desc' => 'Add the missing SPM subjects beyond the original 7 (Sejarah, Pendidikan Islam, Pendidikan Moral, Perakaunan, Perniagaan, Ekonomi, Sains Komputer, RBT, Sains, Geografi, PSV, three languages, three Islamic electives). Idempotent — existing slugs/names are kept.'],
+    ['key' => 'math_kssm',      'name' => 'KSSM Mathematics (Form 4 + 5)', 'desc' => 'Seed the full KSSM SPM Mathematics syllabus: 20 chapters across Form 4 & Form 5 with all their subtopics, plus a few starter skills. Idempotent — existing topics/subtopics matched by name are kept and just refreshed with form_level.'],
     ['key' => 'demo_data',      'name' => 'Demo data (rich)',     'desc' => 'Populate sample students with attempts, subscriptions, a class, a Snap & Check marking and parent reports so dashboards look alive.', 'has_force' => true],
     ['key' => 'weekly_reports', 'name' => 'Generate weekly reports','desc' => 'Generate this week\'s AI parent report for every active student.'],
     ['key' => 'reminders',      'name' => 'Send study reminders', 'desc' => 'Notify students who have not practised yet today (in-app + WhatsApp if configured).'],

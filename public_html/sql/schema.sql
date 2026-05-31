@@ -131,6 +131,7 @@ CREATE TABLE IF NOT EXISTS subjects (
 CREATE TABLE IF NOT EXISTS topics (
   id          INT AUTO_INCREMENT PRIMARY KEY,
   subject_id  INT NOT NULL,
+  form_level  TINYINT NULL,
   name        VARCHAR(190) NOT NULL,
   slug        VARCHAR(190) NOT NULL,
   description TEXT NULL,
@@ -139,6 +140,7 @@ CREATE TABLE IF NOT EXISTS topics (
   created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_topic_subject (subject_id),
+  INDEX idx_topic_form (form_level),
   CONSTRAINT fk_topic_subject FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -157,6 +159,7 @@ CREATE TABLE IF NOT EXISTS subtopics (
 CREATE TABLE IF NOT EXISTS skills (
   id          INT AUTO_INCREMENT PRIMARY KEY,
   topic_id    INT NOT NULL,
+  subtopic_id INT NULL,
   name        VARCHAR(190) NOT NULL,
   difficulty  ENUM('easy','medium','hard') NOT NULL DEFAULT 'medium',
   description TEXT NULL,
@@ -164,6 +167,7 @@ CREATE TABLE IF NOT EXISTS skills (
   created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_skill_topic (topic_id),
+  INDEX idx_skill_subtopic (subtopic_id),
   CONSTRAINT fk_skill_topic FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
