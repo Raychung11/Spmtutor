@@ -310,6 +310,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
 
+            case 'perakaunan_kssm':
+                require_once __DIR__ . '/../cron/seed_perakaunan_kssm.php';
+                $r = perakaunan_kssm_run();
+                if (($r['status'] ?? '') !== 'ok') {
+                    $output = ['title' => 'KSSM Prinsip Perakaunan', 'lines' => [$r['message'] ?? 'Failed.'], 'kind' => 'error'];
+                } else {
+                    $lines = [
+                        'Bab: created ' . $r['topics_created'] . ', adopted legacy ' . $r['topics_adopted'] . ', kept ' . $r['topics_kept'] . ' (catalog ' . $r['catalog_topics'] . ')',
+                        'Subtopik: created ' . $r['subtopics_created'] . ', kept ' . $r['subtopics_kept'],
+                        'Kemahiran: created ' . $r['skills_created'] . ', kept ' . $r['skills_kept'],
+                    ];
+                    $lines[] = $r['formulas_table']
+                        ? 'Formula / nisbah: created ' . $r['formulas_created'] . ', kept ' . $r['formulas_kept']
+                        : 'Formula / nisbah: table missing — run database migrations to enable.';
+                    $lines[] = 'Next: Admin → Topics, filter by Prinsip Perakaunan, 🤖 Qs to generate jurnal / lejar / penyata banks.';
+                    $output = ['title' => 'KSSM Prinsip Perakaunan seeded', 'lines' => $lines, 'kind' => 'success'];
+                }
+                break;
+
             case 'physics_kssm':
                 require_once __DIR__ . '/../cron/seed_physics_kssm.php';
                 $r = physics_kssm_run();
@@ -405,6 +424,7 @@ $seeders = [
     ['key' => 'geografi_kssm',  'name' => 'KSSM Geografi (Tingkatan 4 + 5)',          'desc' => 'Seed the full KSSM SPM Geografi syllabus: 25 bab (T4: 15 — peta topografi, plat tektonik, batuan, luluhawa, sungai, ombak, taburan/pertumbuhan/migrasi penduduk, petempatan, urbanisasi; T5: 10 — graf, foto, cuaca/iklim, tumbuhan, sumber tenaga, kegiatan ekonomi, kesan terhadap alam sekitar) with subtopik + starter skills, plus a locations bank of ~40 ciri geografi (banjaran, sungai, tasik, plat, zon iklim, sumber tenaga, petempatan) used by the AI Geografi Trainer. Run phase18 migration first to enable the locations table.'],
     ['key' => 'pendidikan_islam_kssm', 'name' => 'KSSM Pendidikan Islam (Tingkatan 4 + 5)', 'desc' => 'Seed the full KSSM SPM Pendidikan Islam syllabus organised by enam bidang DSKP (Al-Quran, Hadis, Akidah, Fiqah, Sirah dan Tamadun Islam, Akhlak Islamiah) for both Tingkatan 4 dan 5 — 12 bidang total with pelajaran sebagai subtopik + starter kemahiran, plus a bank of ~20 ayat / hadis / doa lengkap dengan teks Arab, transliterasi, terjemahan dan tema (rasuah, tauhid, dakwah, kepimpinan, akhlak, istiqamah) yang digunakan oleh AI Pendidikan Islam Trainer dan flashcard hafazan. Run phase19 migration first to enable the ayat/hadis table.'],
     ['key' => 'pendidikan_moral_kssm', 'name' => 'KSSM Pendidikan Moral (Tingkatan 4 + 5)', 'desc' => 'Seed the full KSSM SPM Pendidikan Moral syllabus: 24 unit (T4: 12, T5: 12) merentas tiga bidang DSKP — Bidang 5 (Insan Bermoral), Bidang 6 (Jati Diri Moral), Bidang 7 (Moral dan Kenegaraan) — dengan subtopik + starter kemahiran, plus a 18-Nilai Utama bank (Kepercayaan kepada Tuhan, Baik hati, Bertanggungjawab, Hormat, Kasih sayang, Keadilan, Kebebasan, Keberanian, Kejujuran, Kerajinan, Kerjasama, Kesederhanaan, Toleransi, Patriotisme, Rasional, dll.) dengan takrifan, contoh, kata kunci dan kategori. Run phase20 migration first to enable the nilai table.'],
+    ['key' => 'perakaunan_kssm', 'name' => 'KSSM Prinsip Perakaunan (Tingkatan 4 + 5)', 'desc' => 'Seed the full KSSM SPM Prinsip Perakaunan syllabus: 16 bab (T4: 9 — Pengenalan, Klasifikasi & Persamaan, Dokumen Perniagaan, Buku Catatan Pertama, Lejar, Imbangan Duga, Penyata Kewangan Milikan Tunggal, Pelarasan, Pembetulan Kesilapan; T5: 7 — Analisis Penyata Kewangan, Rekod Tak Lengkap, Kawalan Dalaman, Perkongsian, Syarikat Berhad, Kelab dan Persatuan, Perakaunan Kos) with subtopik + starter kemahiran, plus a formula/nisbah bank (~25 entries — persamaan perakaunan, kos jualan, untung kasar/bersih, susut nilai garis lurus & baki berkurangan, margin untung, ROCE, nisbah semasa & cepat, pusing ganti inventori, faedah perkongsian, dividen syer, titik pulang modal, margin caruman). Run phase21 migration first to enable the formula table.'],
     ['key' => 'demo_data',      'name' => 'Demo data (rich)',     'desc' => 'Populate sample students with attempts, subscriptions, a class, a Snap & Check marking and parent reports so dashboards look alive.', 'has_force' => true],
     ['key' => 'weekly_reports', 'name' => 'Generate weekly reports','desc' => 'Generate this week\'s AI parent report for every active student.'],
     ['key' => 'reminders',      'name' => 'Send study reminders', 'desc' => 'Notify students who have not practised yet today (in-app + WhatsApp if configured).'],
