@@ -173,9 +173,11 @@ function generate_questions_for_topic(int $topicId, int $count, string $difficul
         $len = mb_strlen($raw);
         $head = mb_substr($raw, 0, 200);
         $tail = $len > 400 ? '… ' . mb_substr($raw, $len - 200) : '';
+        $jsonErr = json_last_error_msg();
         return ['inserted' => 0, 'flagged' => 0, 'errors' => [
-            "AI returned unparseable JSON ({$len} chars). Head: {$head}{$tail}",
-            'Tip: if the output ends mid-text, the response hit max_tokens. Raise it in Admin → AI Settings, or generate fewer questions per run.',
+            "AI returned unparseable JSON ({$len} chars). json_decode said: {$jsonErr}",
+            "Head: {$head}{$tail}",
+            'Tip: if the output ends mid-text, raise Max output tokens in Admin → AI Settings. If json_decode complains about a syntax error, the model may have included unescaped control chars or trailing commas — try regenerating, or generate fewer questions per run.',
         ]];
     }
 
@@ -345,9 +347,11 @@ function generate_skills_for_topic(int $topicId, int $count): array
         $len = mb_strlen($raw);
         $head = mb_substr($raw, 0, 200);
         $tail = $len > 400 ? '… ' . mb_substr($raw, $len - 200) : '';
+        $jsonErr = json_last_error_msg();
         return ['inserted' => 0, 'errors' => [
-            "AI returned unparseable JSON ({$len} chars). Head: {$head}{$tail}",
-            'Tip: if the output ends mid-text, the response hit max_tokens. Raise it in Admin → AI Settings, or generate fewer skills per run.',
+            "AI returned unparseable JSON ({$len} chars). json_decode said: {$jsonErr}",
+            "Head: {$head}{$tail}",
+            'Tip: if the output ends mid-text, raise Max output tokens in Admin → AI Settings.',
         ]];
     }
 
@@ -383,14 +387,97 @@ function strip_code_fences(string $text): string
     return trim($t);
 }
 
+/**
+ * Repair common LLM-JSON issues that make json_decode choke even when the
+ * structure looks correct:
+ *  - smart quotes / curly quotes → straight quotes
+ *  - unicode minus / en-dash inside numbers → ascii hyphen
+ *  - literal newline / tab / CR inside string values → \n / \t / \r
+ *  - trailing commas before ] or }
+ *  - BOM at the start
+ */
+function repair_llm_json(string $json): string
+{
+    // Strip UTF-8 BOM.
+    if (str_starts_with($json, "\xEF\xBB\xBF")) {
+        $json = substr($json, 3);
+    }
+
+    // Convert curly quotes outside-strings is unsafe to detect; do a blanket
+    // replacement (curly quotes inside copy paragraphs are very rare in
+    // generated MCQs and a straight quote is always safer for json_decode).
+    $json = strtr($json, [
+        "\u{201C}" => '"', "\u{201D}" => '"',
+        "\u{2018}" => "'", "\u{2019}" => "'",
+    ]);
+
+    // Walk char-by-char so we only modify content INSIDE JSON strings.
+    $out = '';
+    $len = strlen($json);
+    $inString = false;
+    $escape   = false;
+    for ($i = 0; $i < $len; $i++) {
+        $ch = $json[$i];
+        if ($inString) {
+            if ($escape) {
+                $out   .= $ch;
+                $escape = false;
+                continue;
+            }
+            if ($ch === '\\') {
+                $out   .= $ch;
+                $escape = true;
+                continue;
+            }
+            if ($ch === '"') {
+                $out      .= $ch;
+                $inString  = false;
+                continue;
+            }
+            // Inside a string: escape raw control chars that json_decode rejects.
+            if ($ch === "\n") { $out .= '\\n'; continue; }
+            if ($ch === "\r") { $out .= '\\r'; continue; }
+            if ($ch === "\t") { $out .= '\\t'; continue; }
+            if (ord($ch) < 0x20) { $out .= sprintf('\\u%04x', ord($ch)); continue; }
+            $out .= $ch;
+        } else {
+            if ($ch === '"') {
+                $inString = true;
+            }
+            $out .= $ch;
+        }
+    }
+
+    // Strip trailing commas before ] or } (a very common LLM mistake).
+    $out = preg_replace('/,\s*([\]\}])/u', '$1', $out);
+
+    return $out;
+}
+
+/** Try every parse strategy in order. Returns the decoded array or null. */
+function try_decode_json_array(string $candidate): ?array
+{
+    $d = json_decode($candidate, true);
+    if (is_array($d)) {
+        return $d;
+    }
+    $repaired = repair_llm_json($candidate);
+    if ($repaired !== $candidate) {
+        $d = json_decode($repaired, true);
+        if (is_array($d)) {
+            return $d;
+        }
+    }
+    return null;
+}
+
 /** Extract the first JSON object from a free-form AI reply. */
 function parse_first_json_object(string $text): ?array
 {
     $cleaned = strip_code_fences($text);
 
-    // Fast path: cleaned text is the whole object.
-    $direct = json_decode($cleaned, true);
-    if (is_array($direct)) {
+    $direct = try_decode_json_array($cleaned);
+    if ($direct !== null) {
         return $direct;
     }
 
@@ -399,23 +486,21 @@ function parse_first_json_object(string $text): ?array
     if ($start === false || $end === false || $end <= $start) {
         return null;
     }
-    $json = substr($cleaned, $start, $end - $start + 1);
-    $data = json_decode($json, true);
-    return is_array($data) ? $data : null;
+    return try_decode_json_array(substr($cleaned, $start, $end - $start + 1));
 }
 
 /**
  * Extract a JSON array (of question / skill objects) from a free-form AI reply.
- * Tolerates markdown code fences and tries to salvage truncated output by
- * trimming back to the last complete object when the array is unterminated.
+ * Tolerates markdown code fences, smart quotes, unescaped control chars,
+ * trailing commas, and tries to salvage truncated output by trimming back to
+ * the last complete object when the array is unterminated.
  */
 function parse_questions_json(string $text): ?array
 {
     $cleaned = strip_code_fences($text);
 
-    // Fast path: cleaned text is the whole array.
-    $direct = json_decode($cleaned, true);
-    if (is_array($direct)) {
+    $direct = try_decode_json_array($cleaned);
+    if ($direct !== null) {
         return $direct;
     }
 
@@ -424,11 +509,10 @@ function parse_questions_json(string $text): ?array
         return null;
     }
     $end = strrpos($cleaned, ']');
-
     if ($end !== false && $end > $start) {
         $candidate = substr($cleaned, $start, $end - $start + 1);
-        $data = json_decode($candidate, true);
-        if (is_array($data)) {
+        $data = try_decode_json_array($candidate);
+        if ($data !== null) {
             return $data;
         }
     }
@@ -441,6 +525,5 @@ function parse_questions_json(string $text): ?array
         return null;
     }
     $salvaged = substr($tail, 0, $lastClose + 1) . ']';
-    $data = json_decode($salvaged, true);
-    return is_array($data) ? $data : null;
+    return try_decode_json_array($salvaged);
 }
