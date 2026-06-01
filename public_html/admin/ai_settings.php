@@ -16,6 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         setting_set('ai_provider', $provider);
         setting_set('ai_model', input('model'));
         setting_set('ai_api_base', input('api_base'));
+        $maxTok = max(512, min(16384, input_int('max_tokens', 4096)));
+        setting_set('ai_max_tokens', (string) $maxTok);
 
         if (input('clear_key') === '1') {
             setting_set('ai_api_key', '');
@@ -90,7 +92,13 @@ admin_layout_start('AI Settings', $admin, 'ai_settings.php');
     <?php if ($hasKey && !$fromEnv): ?>
       <label class="muted" style="display:inline-flex;gap:6px;align-items:center;font-size:13px"><input type="checkbox" name="clear_key" value="1"> Clear the stored key (revert to demo mode)</label>
     <?php endif; ?>
-    <div class="field" style="margin-top:14px"><label>API base URL (optional override)</label><input class="input" name="api_base" value="<?= e($cfg['base']) ?>" placeholder="leave blank for provider default"></div>
+    <div class="grid grid--2" style="margin-top:14px">
+      <div class="field"><label>API base URL (optional override)</label><input class="input" name="api_base" value="<?= e($cfg['base']) ?>" placeholder="leave blank for provider default"></div>
+      <div class="field"><label>Max output tokens per call</label>
+        <input class="input" type="number" name="max_tokens" min="512" max="16384" step="256" value="<?= e(setting_get('ai_max_tokens', '4096') ?? '4096') ?>">
+        <p class="muted" style="font-size:12px;margin:4px 0 0">Higher = longer answers but more cost. 4096 fits ~5 SPM MCQs with explanations. Raise to 8192 if you're generating 10+ questions per call and seeing truncated JSON.</p>
+      </div>
+    </div>
     <button class="btn">Save settings</button>
   </form>
 </div>

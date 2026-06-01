@@ -170,7 +170,13 @@ function generate_questions_for_topic(int $topicId, int $count, string $difficul
 
     $draft = parse_questions_json($raw);
     if (!$draft) {
-        return ['inserted' => 0, 'flagged' => 0, 'errors' => ['AI returned unparseable JSON. First 200 chars: ' . mb_substr($raw, 0, 200)]];
+        $len = mb_strlen($raw);
+        $head = mb_substr($raw, 0, 200);
+        $tail = $len > 400 ? '… ' . mb_substr($raw, $len - 200) : '';
+        return ['inserted' => 0, 'flagged' => 0, 'errors' => [
+            "AI returned unparseable JSON ({$len} chars). Head: {$head}{$tail}",
+            'Tip: if the output ends mid-text, the response hit max_tokens. Raise it in Admin → AI Settings, or generate fewer questions per run.',
+        ]];
     }
 
     // Optional second pass: critique each draft and keep a flag on suspect ones.
@@ -336,7 +342,13 @@ function generate_skills_for_topic(int $topicId, int $count): array
     }
     $skills = parse_questions_json($raw);
     if (!$skills) {
-        return ['inserted' => 0, 'errors' => ['AI returned unparseable JSON. First 200 chars: ' . mb_substr($raw, 0, 200)]];
+        $len = mb_strlen($raw);
+        $head = mb_substr($raw, 0, 200);
+        $tail = $len > 400 ? '… ' . mb_substr($raw, $len - 200) : '';
+        return ['inserted' => 0, 'errors' => [
+            "AI returned unparseable JSON ({$len} chars). Head: {$head}{$tail}",
+            'Tip: if the output ends mid-text, the response hit max_tokens. Raise it in Admin → AI Settings, or generate fewer skills per run.',
+        ]];
     }
 
     $inserted = 0;
@@ -361,28 +373,74 @@ function generate_skills_for_topic(int $topicId, int $count): array
     return ['inserted' => $inserted, 'errors' => $errors];
 }
 
+/** Strip markdown code fences (```json … ```) and surrounding chatter. */
+function strip_code_fences(string $text): string
+{
+    $t = trim($text);
+    // Strip leading ```json or ``` and trailing ```.
+    $t = preg_replace('/^```(?:json|JSON)?\s*\n?/u', '', $t);
+    $t = preg_replace('/\n?```\s*$/u', '', $t);
+    return trim($t);
+}
+
 /** Extract the first JSON object from a free-form AI reply. */
 function parse_first_json_object(string $text): ?array
 {
-    $start = strpos($text, '{');
-    $end   = strrpos($text, '}');
+    $cleaned = strip_code_fences($text);
+
+    // Fast path: cleaned text is the whole object.
+    $direct = json_decode($cleaned, true);
+    if (is_array($direct)) {
+        return $direct;
+    }
+
+    $start = strpos($cleaned, '{');
+    $end   = strrpos($cleaned, '}');
     if ($start === false || $end === false || $end <= $start) {
         return null;
     }
-    $json = substr($text, $start, $end - $start + 1);
+    $json = substr($cleaned, $start, $end - $start + 1);
     $data = json_decode($json, true);
     return is_array($data) ? $data : null;
 }
 
-/** Extract the first JSON array (of question objects) from a free-form reply. */
+/**
+ * Extract a JSON array (of question / skill objects) from a free-form AI reply.
+ * Tolerates markdown code fences and tries to salvage truncated output by
+ * trimming back to the last complete object when the array is unterminated.
+ */
 function parse_questions_json(string $text): ?array
 {
-    $start = strpos($text, '[');
-    $end   = strrpos($text, ']');
-    if ($start === false || $end === false || $end <= $start) {
+    $cleaned = strip_code_fences($text);
+
+    // Fast path: cleaned text is the whole array.
+    $direct = json_decode($cleaned, true);
+    if (is_array($direct)) {
+        return $direct;
+    }
+
+    $start = strpos($cleaned, '[');
+    if ($start === false) {
         return null;
     }
-    $json = substr($text, $start, $end - $start + 1);
-    $data = json_decode($json, true);
+    $end = strrpos($cleaned, ']');
+
+    if ($end !== false && $end > $start) {
+        $candidate = substr($cleaned, $start, $end - $start + 1);
+        $data = json_decode($candidate, true);
+        if (is_array($data)) {
+            return $data;
+        }
+    }
+
+    // Truncated output: response ends mid-object. Walk back to the last `},`
+    // and synthesise a closing `]` so we can at least keep the complete items.
+    $tail = substr($cleaned, $start);
+    $lastClose = strrpos($tail, '},');
+    if ($lastClose === false) {
+        return null;
+    }
+    $salvaged = substr($tail, 0, $lastClose + 1) . ']';
+    $data = json_decode($salvaged, true);
     return is_array($data) ? $data : null;
 }

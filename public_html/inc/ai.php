@@ -148,7 +148,7 @@ function ai_call_anthropic(string $system, array $messages, float $temp, ?string
 {
     $payload = [
         'model'      => $model ?: AI_MODEL,
-        'max_tokens' => 1024,
+        'max_tokens' => (int) (setting_get('ai_max_tokens', '4096') ?: '4096'),
         'temperature' => $temp,
         'system'     => $system,
         'messages'   => array_map(fn($m) => [
@@ -174,6 +174,7 @@ function ai_call_openai(string $system, array $messages, float $temp, ?string $m
     $payload = [
         'model'       => $model ?: AI_MODEL,
         'temperature' => $temp,
+        'max_tokens'  => (int) (setting_get('ai_max_tokens', '4096') ?: '4096'),
         'messages'    => $msgs,
     ];
     $resp = ai_http($base ?: 'https://api.openai.com/v1/chat/completions', $payload, [
