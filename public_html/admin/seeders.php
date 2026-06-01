@@ -253,6 +253,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
 
+            case 'geografi_kssm':
+                require_once __DIR__ . '/../cron/seed_geografi_kssm.php';
+                $r = geografi_kssm_run();
+                if (($r['status'] ?? '') !== 'ok') {
+                    $output = ['title' => 'KSSM Geografi', 'lines' => [$r['message'] ?? 'Failed.'], 'kind' => 'error'];
+                } else {
+                    $lines = [
+                        'Bab: created ' . $r['topics_created'] . ', adopted legacy ' . $r['topics_adopted'] . ', kept ' . $r['topics_kept'] . ' (catalog ' . $r['catalog_topics'] . ')',
+                        'Subtopik: created ' . $r['subtopics_created'] . ', kept ' . $r['subtopics_kept'],
+                        'Kemahiran: created ' . $r['skills_created'] . ', kept ' . $r['skills_kept'],
+                    ];
+                    $lines[] = $r['locations_table']
+                        ? 'Lokasi: created ' . $r['locations_created'] . ', kept ' . $r['locations_kept']
+                        : 'Lokasi: table missing — run database migrations to enable.';
+                    $lines[] = 'Next: Admin → Topics, filter by Geografi, 🤖 Qs to generate peta / iklim / sumber question banks.';
+                    $output = ['title' => 'KSSM Geografi seeded', 'lines' => $lines, 'kind' => 'success'];
+                }
+                break;
+
             case 'physics_kssm':
                 require_once __DIR__ . '/../cron/seed_physics_kssm.php';
                 $r = physics_kssm_run();
@@ -345,6 +364,7 @@ $seeders = [
     ['key' => 'bm_kssm',        'name' => 'KSSM Bahasa Melayu (Form 4 + 5)',          'desc' => 'Seed the full KSSM SPM Bahasa Melayu syllabus: 14 topik (F4: 7, F5: 7) — Kemahiran Mendengar, Sistem Bahasa, Tatabahasa, Pemahaman, Rumusan, Karangan, KOMSAS, Novel — with subtopics + starter skills, plus a peribahasa / simpulan bahasa / bidalan / pepatah / cogan kata bank used by the AI Tatabahasa Trainer. Run phase15 migration first to enable the peribahasa table.'],
     ['key' => 'english_kssm',   'name' => 'KSSM English (Form 4 + 5)',                'desc' => 'Seed the full KSSM SPM English syllabus: 20 chapters (F4: 10, F5: 10) covering Listening / Speaking / Reading / Writing / Grammar / Vocabulary / Literature (Poems, Short Stories, Novel, Drama), with subtopics + starter skills. Plus a starter vocabulary bank (~55 SPM-level words), idiom + phrasal verb bank (~30 entries) and 5 model writing samples used by the AI Essay Marker. Run phase16 migration first to enable the reference tables.'],
     ['key' => 'sejarah_kssm',   'name' => 'KSSM Sejarah (Tingkatan 4 + 5)',           'desc' => 'Seed the full KSSM SPM Sejarah syllabus: 20 bab (T4: 10 — Warisan Negara Bangsa → Pemasyhuran Kemerdekaan; T5: 10 — Kedaulatan Negara → Kecemerlangan Malaysia di Persada Dunia) with subtopik + starter skills, plus a timeline bank of ~40 peristiwa penting (1400 Melaka → 1991 Wawasan 2020) used by the AI Sejarah Trainer and date-recall flashcards. Run phase17 migration first to enable the timeline table.'],
+    ['key' => 'geografi_kssm',  'name' => 'KSSM Geografi (Tingkatan 4 + 5)',          'desc' => 'Seed the full KSSM SPM Geografi syllabus: 25 bab (T4: 15 — peta topografi, plat tektonik, batuan, luluhawa, sungai, ombak, taburan/pertumbuhan/migrasi penduduk, petempatan, urbanisasi; T5: 10 — graf, foto, cuaca/iklim, tumbuhan, sumber tenaga, kegiatan ekonomi, kesan terhadap alam sekitar) with subtopik + starter skills, plus a locations bank of ~40 ciri geografi (banjaran, sungai, tasik, plat, zon iklim, sumber tenaga, petempatan) used by the AI Geografi Trainer. Run phase18 migration first to enable the locations table.'],
     ['key' => 'demo_data',      'name' => 'Demo data (rich)',     'desc' => 'Populate sample students with attempts, subscriptions, a class, a Snap & Check marking and parent reports so dashboards look alive.', 'has_force' => true],
     ['key' => 'weekly_reports', 'name' => 'Generate weekly reports','desc' => 'Generate this week\'s AI parent report for every active student.'],
     ['key' => 'reminders',      'name' => 'Send study reminders', 'desc' => 'Notify students who have not practised yet today (in-app + WhatsApp if configured).'],
