@@ -1023,6 +1023,22 @@ CREATE TABLE IF NOT EXISTS islam_ayat_hadis (
   UNIQUE KEY uq_iah_ref (reference)
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS moral_values (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  topic_id      INT NULL,
+  topic_label   VARCHAR(120) NULL,
+  value_name    VARCHAR(120) NOT NULL,
+  definition    TEXT NOT NULL,
+  example       TEXT NULL,
+  keywords      VARCHAR(255) NULL,
+  category      VARCHAR(60) NULL,
+  sort_order    INT NOT NULL DEFAULT 0,
+  status        VARCHAR(20) NOT NULL DEFAULT 'active',
+  created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_mv_category (category),
+  UNIQUE KEY uq_mv_name (value_name)
+) ENGINE=InnoDB;
+
 -- =====================================================================
 -- Landing page leads / contact form
 -- =====================================================================
