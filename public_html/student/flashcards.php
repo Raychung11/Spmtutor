@@ -115,6 +115,8 @@ if (!empty($lib['tag_col'])) {
 
 $isRtl = ($lib['language'] ?? 'en') === 'ar';
 $tableReady = fcp_table_ready();
+$streak  = fcp_streak_days($uid, $lib['slug']);
+$mastery = fcp_mastery($uid, $lib['slug'], $totalAll);
 
 student_layout_start('Flashcards · ' . $lib['label'], $user, 'library.php');
 ?>
@@ -122,8 +124,33 @@ student_layout_start('Flashcards · ' . $lib['label'], $user, 'library.php');
   <p style="margin:0 0 8px">
     <a href="<?= url('student/library.php?lib=' . urlencode($lib['slug'])) ?>" class="muted">← Browse <?= e($lib['label']) ?></a>
   </p>
-  <h2 style="margin:0 0 6px">Flashcards · <?= e($lib['label']) ?></h2>
-  <p class="muted" style="margin:0"><?= e($lib['description']) ?></p>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
+    <div>
+      <h2 style="margin:0 0 6px">Flashcards · <?= e($lib['label']) ?></h2>
+      <p class="muted" style="margin:0"><?= e($lib['description']) ?></p>
+    </div>
+    <?php if ($streak > 0 || $mastery['tier'] !== 'learning'): ?>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <?php if ($mastery['tier'] !== 'learning'): ?>
+          <span class="mastery-badge mastery-badge--<?= e($mastery['tier']) ?>" title="<?= $mastery['graduated'] ?> of <?= $mastery['total'] ?> cards mastered (interval &ge; 14d)">
+            <?= e($mastery['label']) ?> · <?= $mastery['pct'] ?>%
+          </span>
+        <?php endif; ?>
+        <?php if ($streak > 0): ?>
+          <span class="streak-badge" title="Consecutive days you've studied this library">🔥 <?= $streak ?>d streak</span>
+        <?php endif; ?>
+      </div>
+    <?php endif; ?>
+  </div>
+  <?php if ($mastery['total'] > 0): ?>
+    <div class="mastery-bar" title="Cards graduated to interval ≥ 14d">
+      <div style="width:<?= $mastery['pct'] ?>%"></div>
+    </div>
+    <p class="muted" style="font-size:11px;margin:4px 0 0">
+      Mastered <?= $mastery['graduated'] ?> / <?= $mastery['total'] ?> cards.
+      Next tier: <?= e(next_mastery_tier_label($mastery['tier'])) ?>.
+    </p>
+  <?php endif; ?>
 </div>
 
 <?php if (!$tableReady): ?>
@@ -205,6 +232,25 @@ student_layout_start('Flashcards · ' . $lib['label'], $user, 'library.php');
 <?php endif; ?>
 
 <style>
+.streak-badge {
+  font-size:11px; font-weight:600;
+  padding:3px 10px; border-radius:999px;
+  background: rgba(251, 146, 60, .14);
+  border: 1px solid rgba(251, 146, 60, .5);
+  color: #fdba74;
+}
+.mastery-badge {
+  font-size:11px; font-weight:600;
+  padding:3px 10px; border-radius:999px;
+  border:1px solid;
+}
+.mastery-badge--bronze   { background: rgba(180, 83, 9, .14);  border-color: rgba(217, 119, 6, .55); color: #fcd34d; }
+.mastery-badge--silver   { background: rgba(148, 163, 184, .14); border-color: rgba(203, 213, 225, .5); color: #e2e8f0; }
+.mastery-badge--gold     { background: rgba(234, 179, 8, .18); border-color: rgba(234, 179, 8, .6); color: #fde047; }
+.mastery-badge--mastered { background: rgba(139, 92, 246, .18); border-color: var(--primary); color: #ddd1ff; }
+.mastery-bar { height:6px; background:var(--bg-2); border-radius:999px; overflow:hidden; margin-top:10px; }
+.mastery-bar > div { height:100%; background: linear-gradient(90deg, #f59e0b 0%, #eab308 40%, var(--primary) 100%); transition: width .3s; }
+
 .fc-stat { background:var(--card-2); border:1px solid var(--border); border-radius:10px; padding:10px 12px; text-align:center; }
 .fc-stat__label { font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
 .fc-stat__num { font-size:22px; font-weight:700; margin-top:2px; }

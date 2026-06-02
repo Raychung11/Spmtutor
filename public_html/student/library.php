@@ -48,9 +48,10 @@ if (!$selected):
         <?php foreach ($list as $lib):
             $count = reference_library_count($lib);
             $unavailable = $count === 0;
-            $dueCount = (!$unavailable && !empty($lib['flashcard']))
-                ? fcp_due_count((int) $user['id'], $lib['slug'], $count)
-                : 0;
+            $hasFC = !$unavailable && !empty($lib['flashcard']);
+            $dueCount = $hasFC ? fcp_due_count((int) $user['id'], $lib['slug'], $count) : 0;
+            $streak   = $hasFC ? fcp_streak_days((int) $user['id'], $lib['slug']) : 0;
+            $mastery  = $hasFC ? fcp_mastery((int) $user['id'], $lib['slug'], $count) : null;
         ?>
           <a class="lib-card<?= $unavailable ? ' lib-card--disabled' : '' ?>"
              href="<?= $unavailable ? '#' : url('student/library.php?lib=' . urlencode($lib['slug'])) ?>">
@@ -61,13 +62,29 @@ if (!$selected):
               <?php endif; ?>
             </div>
             <div class="lib-card__desc"><?= e($lib['description']) ?></div>
+            <?php if ($hasFC && ($streak > 0 || ($mastery && $mastery['tier'] !== 'learning'))): ?>
+              <div class="lib-card__badges">
+                <?php if ($mastery && $mastery['tier'] !== 'learning'): ?>
+                  <span class="mastery-badge mastery-badge--<?= e($mastery['tier']) ?>" title="<?= $mastery['graduated'] ?> of <?= $mastery['total'] ?> cards mastered (interval &ge; 14d)">
+                    <?= e($mastery['label']) ?> · <?= $mastery['pct'] ?>%
+                  </span>
+                <?php endif; ?>
+                <?php if ($streak > 0): ?>
+                  <span class="streak-badge" title="Consecutive days you've studied this library">🔥 <?= $streak ?>d streak</span>
+                <?php endif; ?>
+              </div>
+            <?php endif; ?>
             <div class="lib-card__foot">
               <?php if ($unavailable): ?>
                 <span class="muted">Not yet seeded</span>
               <?php else: ?>
                 <span><strong><?= $count ?></strong> entries</span>
-                <?php if (!empty($lib['flashcard'])): ?>
-                  <span class="muted">· flashcards available</span>
+                <?php if ($hasFC): ?>
+                  <?php if ($mastery && $mastery['graduated'] > 0): ?>
+                    <span class="muted">· <?= $mastery['graduated'] ?> mastered</span>
+                  <?php else: ?>
+                    <span class="muted">· flashcards available</span>
+                  <?php endif; ?>
                 <?php endif; ?>
               <?php endif; ?>
             </div>
@@ -253,6 +270,23 @@ function library_render_card(array $row, array $lib): void
   font-size:10px; font-weight:700; letter-spacing:.04em;
   padding:2px 8px; border-radius:999px;
 }
+.lib-card__badges { display:flex; gap:6px; flex-wrap:wrap; }
+.streak-badge {
+  font-size:11px; font-weight:600;
+  padding:2px 8px; border-radius:999px;
+  background: rgba(251, 146, 60, .14);
+  border: 1px solid rgba(251, 146, 60, .5);
+  color: #fdba74;
+}
+.mastery-badge {
+  font-size:11px; font-weight:600;
+  padding:2px 8px; border-radius:999px;
+  border:1px solid;
+}
+.mastery-badge--bronze   { background: rgba(180, 83, 9, .14);  border-color: rgba(217, 119, 6, .55);  color: #fcd34d; }
+.mastery-badge--silver   { background: rgba(148, 163, 184, .14); border-color: rgba(203, 213, 225, .5); color: #e2e8f0; }
+.mastery-badge--gold     { background: rgba(234, 179, 8, .18); border-color: rgba(234, 179, 8, .6); color: #fde047; }
+.mastery-badge--mastered { background: rgba(139, 92, 246, .18); border-color: var(--primary); color: #ddd1ff; }
 .lib-card__desc { font-size:13px; color:var(--muted); line-height:1.45; }
 .lib-card__foot { font-size:12px; color:var(--muted); display:flex; gap:6px; margin-top:auto; }
 

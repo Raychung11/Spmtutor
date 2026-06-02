@@ -175,3 +175,96 @@ function fcp_due_counts(int $userId, array $librarySlugs, array $totalCardsBySlu
     }
     return $out;
 }
+
+/**
+ * Compute the current daily streak for a library — consecutive days the
+ * user has touched any card. Streak resets if they miss a day (allows
+ * either "today" or "yesterday" as the most recent activity so the
+ * student doesn't lose their streak the moment midnight hits).
+ */
+function fcp_streak_days(int $userId, string $librarySlug): int
+{
+    if (!fcp_table_ready()) return 0;
+    $rows = db_all(
+        "SELECT DISTINCT DATE(last_seen_at) AS d
+         FROM flashcard_progress
+         WHERE user_id = ? AND library_slug = ? AND last_seen_at IS NOT NULL
+         ORDER BY d DESC LIMIT 90",
+        [$userId, $librarySlug]
+    );
+    if (!$rows) return 0;
+    $dates = array_column($rows, 'd');
+    $today     = date('Y-m-d');
+    $yesterday = date('Y-m-d', strtotime('-1 day'));
+    if ($dates[0] !== $today && $dates[0] !== $yesterday) return 0;
+
+    $streak = 0;
+    $cursor = $dates[0];
+    foreach ($dates as $d) {
+        if ($d === $cursor) {
+            $streak++;
+            $cursor = date('Y-m-d', strtotime($cursor . ' -1 day'));
+        } else {
+            break;
+        }
+    }
+    return $streak;
+}
+
+/**
+ * Per-library mastery: % of cards "graduated" (status=known AND interval>=14
+ * days, i.e. you've shown you can recall it for at least two weeks).
+ *
+ * Returns:
+ *   ['graduated' => int, 'total' => int, 'pct' => 0..100,
+ *    'tier' => 'learning|bronze|silver|gold|mastered',
+ *    'label' => 'Bronze' ...]
+ */
+function fcp_mastery(int $userId, string $librarySlug, int $totalCards): array
+{
+    $tier = 'learning';
+    $pct  = 0;
+    $graduated = 0;
+    if (fcp_table_ready() && $totalCards > 0) {
+        $row = db_one(
+            "SELECT COUNT(*) c FROM flashcard_progress
+             WHERE user_id = ? AND library_slug = ?
+               AND status = 'known' AND interval_days >= 14",
+            [$userId, $librarySlug]
+        );
+        $graduated = (int) ($row['c'] ?? 0);
+        $pct = (int) round(($graduated / $totalCards) * 100);
+    }
+    if     ($pct >= 95) $tier = 'mastered';
+    elseif ($pct >= 75) $tier = 'gold';
+    elseif ($pct >= 50) $tier = 'silver';
+    elseif ($pct >= 25) $tier = 'bronze';
+
+    $labels = [
+        'learning' => 'Learning',
+        'bronze'   => 'Bronze',
+        'silver'   => 'Silver',
+        'gold'     => 'Gold',
+        'mastered' => 'Mastered',
+    ];
+    return [
+        'graduated' => $graduated,
+        'total'     => $totalCards,
+        'pct'       => $pct,
+        'tier'      => $tier,
+        'label'     => $labels[$tier],
+    ];
+}
+
+/** Human label for the next mastery tier after the given current tier. */
+function next_mastery_tier_label(string $currentTier): string
+{
+    $ladder = [
+        'learning' => 'Bronze at 25%',
+        'bronze'   => 'Silver at 50%',
+        'silver'   => 'Gold at 75%',
+        'gold'     => 'Mastered at 95%',
+        'mastered' => 'all done — you mastered it!',
+    ];
+    return $ladder[$currentTier] ?? '';
+}
