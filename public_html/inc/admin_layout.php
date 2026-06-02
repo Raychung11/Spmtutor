@@ -17,6 +17,7 @@ function admin_layout_start(string $title, array $user, string $current): void
         ['label' => 'Leads',         'href' => 'admin/leads.php',         'primary' => true, 'icon' => '✉️'],
         ['label' => 'AI Settings',   'href' => 'admin/ai_settings.php'],
         ['label' => 'AI Prompts',    'href' => 'admin/ai_prompts.php'],
+        ['label' => 'AI Batch Gen',  'href' => 'admin/ai_batch_generate.php'],
         ['label' => 'Landing CMS',   'href' => 'admin/landing.php'],
         ['label' => 'Seeders',       'href' => 'admin/seeders.php'],
     ], $current);
