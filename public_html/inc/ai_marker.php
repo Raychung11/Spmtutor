@@ -361,6 +361,145 @@ JSON;
     ];
 }
 
+/**
+ * Mark a prompt-engineering attempt — grades the student's prompt against
+ * the 7-criterion rubric used in the Asas Kepintaran Buatan syllabus
+ * (Clarity, Role, Context, Constraints, Output Format, Examples,
+ * Robustness). Returns a rewritten "improved prompt" plus anti-patterns
+ * spotted. $taskContext (optional) describes what the prompt is meant to
+ * achieve so the AI can judge fit-for-purpose.
+ */
+function mark_prompt(string $submission, string $taskContext = '', string $language = 'en'): array
+{
+    $submission = trim($submission);
+    if ($submission === '') {
+        return ['ok' => false, 'error' => $language === 'bm' ? 'Prompt kosong.' : 'Empty prompt.'];
+    }
+    if (!ai_enabled()) {
+        return ['ok' => false, 'error' => 'AI key is not configured. Set it in Admin → AI Settings.'];
+    }
+
+    $wordCount = marker_word_count($submission);
+
+    if ($language === 'bm') {
+        $system = "Anda ialah jurutera prompt berpengalaman yang menilai prompt pelajar SPM bagi mata pelajaran Asas Kepintaran Buatan. "
+            . "Periksa prompt mengikut amalan terbaik LLM moden (Claude, GPT, Gemini).\n\n"
+            . "Rubrik (jumlah 100 markah):\n"
+            . "  - Kejelasan (20m): Tugas dinyatakan dengan jelas tanpa kekaburan?\n"
+            . "  - Peranan/Persona (15m): AI diberi peranan yang sesuai (cth. 'Anda ialah tutor SPM')?\n"
+            . "  - Konteks (15m): Latar belakang mencukupi diberi?\n"
+            . "  - Kekangan (15m): Had panjang, gaya, format ditentukan?\n"
+            . "  - Format Output (15m): Struktur output dinyatakan (JSON, senarai, perenggan)?\n"
+            . "  - Contoh (10m): Contoh few-shot atau template diberi?\n"
+            . "  - Ketahanan (10m): Garis panduan menjauhi halusinasi atau jawapan tidak relevan?\n\n"
+            . "Tahap: 85-100 cemerlang, 70-84 baik, 50-69 memuaskan, <50 perlu perbaikan.\n"
+            . "Kenal pasti anti-corak (vague language, instruksi bercanggah, kurang contoh). "
+            . "Tulis SATU versi prompt yang ditambah baik secara menyeluruh.";
+    } else {
+        $system = "You are an experienced prompt engineer evaluating an SPM student's prompt for the Asas Kepintaran Buatan subject. "
+            . "Check the prompt against modern LLM best practices (Claude, GPT, Gemini).\n\n"
+            . "Rubric (total 100 marks):\n"
+            . "  - Clarity (20m): Is the task clearly stated without ambiguity?\n"
+            . "  - Role/Persona (15m): Is the AI given a suitable role (e.g. 'You are an SPM tutor')?\n"
+            . "  - Context (15m): Is enough background information provided?\n"
+            . "  - Constraints (15m): Are length, style, and format limits specified?\n"
+            . "  - Output Format (15m): Is the expected output structure clearly defined (JSON, list, paragraph)?\n"
+            . "  - Examples (10m): Are few-shot examples or templates provided?\n"
+            . "  - Robustness (10m): Are there guards against hallucination or off-topic answers?\n\n"
+            . "Bands: 85-100 Excellent, 70-84 Good, 50-69 Satisfactory, <50 Needs Improvement.\n"
+            . "Identify anti-patterns (vague language, conflicting instructions, missing examples). "
+            . "Write ONE thoroughly improved version of the prompt.";
+    }
+
+    $instr = $language === 'bm'
+        ? 'Pulangkan respons sebagai SATU objek JSON sahaja mengikut skema ini dengan tepat.'
+        : 'Reply with ONLY a JSON object matching this exact schema.';
+
+    $schema = <<<JSON
+{
+  "score": <integer total score>,
+  "max_score": 100,
+  "band": "<Excellent | Good | Satisfactory | Needs Improvement>",
+  "rubric": {
+    "clarity":       { "score": <0-20>, "max": 20, "comment": "<one line>" },
+    "role":          { "score": <0-15>, "max": 15, "comment": "<one line>" },
+    "context":       { "score": <0-15>, "max": 15, "comment": "<one line>" },
+    "constraints":   { "score": <0-15>, "max": 15, "comment": "<one line>" },
+    "output_format": { "score": <0-15>, "max": 15, "comment": "<one line>" },
+    "examples":      { "score": <0-10>, "max": 10, "comment": "<one line>" },
+    "robustness":    { "score": <0-10>, "max": 10, "comment": "<one line>" }
+  },
+  "strengths":  ["<2-4 short bullet strings>"],
+  "weaknesses": ["<2-4 short bullet strings>"],
+  "suggestions":["<2-4 actionable bullet strings>"],
+  "anti_patterns": [
+    { "original": "<exact phrase from the student's prompt>", "issue": "<short description of the issue>" }
+  ],
+  "improved_prompt": "<a fully rewritten, production-grade version of the student's prompt>"
+}
+JSON;
+
+    $ctxLine = $taskContext !== ''
+        ? ($language === 'bm' ? "Tujuan prompt: $taskContext\n\n" : "Prompt purpose: $taskContext\n\n")
+        : '';
+
+    $user = $ctxLine
+        . ($language === 'bm' ? "Bilangan perkataan: $wordCount\n\nPrompt murid:\n\"\"\"\n" : "Word count: $wordCount\n\nStudent's prompt:\n\"\"\"\n")
+        . $submission
+        . "\n\"\"\"\n\n$instr\n\n$schema";
+
+    try {
+        $raw = ai_chat($system, [['role' => 'user', 'content' => $user]], 0.3);
+    } catch (Throwable $e) {
+        return ['ok' => false, 'error' => 'AI call failed: ' . $e->getMessage()];
+    }
+
+    $data = parse_first_json_object($raw);
+    if (!$data) {
+        return ['ok' => false, 'error' => 'AI returned unparseable JSON. Head: ' . mb_substr($raw, 0, 200), 'raw' => $raw];
+    }
+
+    $improved = (string) ($data['improved_prompt'] ?? '');
+    $anti     = is_array($data['anti_patterns'] ?? null) ? $data['anti_patterns'] : [];
+
+    // Pack anti-patterns into the standard errors[] shape so the existing
+    // renderer + DB column (errors_json) handle them, and put the improved
+    // prompt at the front as a special row with type='improved_prompt'.
+    $errors = [];
+    if ($improved !== '') {
+        $errors[] = [
+            'original'  => $language === 'bm' ? 'Prompt asal anda' : 'Your original prompt',
+            'corrected' => $improved,
+            'type'      => 'improved_prompt',
+            'rule'      => $language === 'bm' ? 'Versi yang ditambah baik oleh AI' : 'AI-rewritten production version',
+        ];
+    }
+    foreach ($anti as $p) {
+        $errors[] = [
+            'original'  => (string) ($p['original'] ?? ''),
+            'corrected' => '',
+            'type'      => 'anti_pattern',
+            'rule'      => (string) ($p['issue'] ?? ''),
+        ];
+    }
+
+    return [
+        'ok'              => true,
+        'word_count'      => $wordCount,
+        'score'           => (int) ($data['score'] ?? 0),
+        'max_score'       => (int) ($data['max_score'] ?? 100),
+        'band'            => (string) ($data['band'] ?? ''),
+        'rubric'          => is_array($data['rubric'] ?? null) ? $data['rubric'] : [],
+        'strengths'       => is_array($data['strengths'] ?? null) ? $data['strengths'] : [],
+        'weaknesses'      => is_array($data['weaknesses'] ?? null) ? $data['weaknesses'] : [],
+        'suggestions'     => is_array($data['suggestions'] ?? null) ? $data['suggestions'] : [],
+        'errors'          => $errors,
+        'improved_prompt' => $improved,
+        'anti_patterns'   => $anti,
+        'raw'             => $raw,
+    ];
+}
+
 /** Persist a submission + AI result into essay_submissions. */
 function save_submission(int $userId, array $params, array $result): int
 {

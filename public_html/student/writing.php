@@ -19,7 +19,7 @@ $savedId  = 0;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tableReady) {
     csrf_check();
     $taskType  = input('task_type');
-    $taskType  = in_array($taskType, ['karangan', 'rumusan', 'tatabahasa', 'upgrade'], true) ? $taskType : 'karangan';
+    $taskType  = in_array($taskType, ['karangan', 'rumusan', 'tatabahasa', 'upgrade', 'prompt'], true) ? $taskType : 'karangan';
     $language  = input('language') === 'en' ? 'en' : 'bm';
     $prompt    = trim(input('prompt'));
     $source    = trim(input('source_passage'));
@@ -36,6 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tableReady) {
             $result = mark_rumusan($sub, $source);
         } elseif ($taskType === 'upgrade') {
             $result = upgrade_vocabulary($sub, $language);
+        } elseif ($taskType === 'prompt') {
+            $result = mark_prompt($sub, $prompt, $language);
         } else {
             $result = mark_tatabahasa($sub, $language);
         }
@@ -56,18 +58,28 @@ $view   = null;
 if ($viewId && $tableReady) {
     $view = db_one('SELECT * FROM essay_submissions WHERE id = ? AND user_id = ?', [$viewId, $uid]);
     if ($view) {
+        $viewErrors = json_decode((string) $view['errors_json'], true) ?: [];
+        $improved   = '';
+        foreach ($viewErrors as $err) {
+            if (($err['type'] ?? '') === 'improved_prompt') {
+                $improved = (string) ($err['corrected'] ?? '');
+                break;
+            }
+        }
         $result = [
-            'ok'          => $view['status'] === 'marked',
-            'word_count'  => (int) ($view['word_count'] ?? 0),
-            'score'       => (int) ($view['score'] ?? 0),
-            'max_score'   => (int) ($view['max_score'] ?? 0),
-            'band'        => (string) ($view['band'] ?? ''),
-            'rubric'      => json_decode((string) $view['rubric_json'],      true) ?: [],
-            'strengths'   => json_decode((string) $view['strengths_json'],   true) ?: [],
-            'weaknesses'  => json_decode((string) $view['weaknesses_json'],  true) ?: [],
-            'suggestions' => json_decode((string) $view['suggestions_json'], true) ?: [],
-            'errors'      => json_decode((string) $view['errors_json'],      true) ?: [],
-            'error'       => $view['error_message'],
+            'ok'              => $view['status'] === 'marked',
+            'word_count'      => (int) ($view['word_count'] ?? 0),
+            'score'           => (int) ($view['score'] ?? 0),
+            'max_score'       => (int) ($view['max_score'] ?? 0),
+            'band'            => (string) ($view['band'] ?? ''),
+            'rubric'          => json_decode((string) $view['rubric_json'],      true) ?: [],
+            'strengths'       => json_decode((string) $view['strengths_json'],   true) ?: [],
+            'weaknesses'      => json_decode((string) $view['weaknesses_json'],  true) ?: [],
+            'suggestions'     => json_decode((string) $view['suggestions_json'], true) ?: [],
+            'errors'          => $viewErrors,
+            'improved_prompt' => $improved,
+            'task_type'       => $view['task_type'],
+            'error'           => $view['error_message'],
         ];
     }
 }
@@ -81,15 +93,15 @@ if ($tableReady) {
     );
 }
 
-$subjects = db_all('SELECT id, slug, name FROM subjects WHERE slug IN ("bahasa-melayu", "english") ORDER BY name');
+$subjects = db_all('SELECT id, slug, name FROM subjects WHERE slug IN ("bahasa-melayu", "english", "kepintaran-buatan") ORDER BY name');
 
 student_layout_start('Writing Marker', $user, 'writing.php');
 ?>
 <div class="card" style="margin-bottom:18px">
   <h2 style="margin:0 0 8px">AI Writing Marker</h2>
   <p class="muted" style="margin:0">
-    Hantar karangan, rumusan atau ayat untuk semakan tatabahasa. AI memarkahkan mengikut rubrik SPM
-    (1103 Bahasa Melayu / 1119 English) dan memberi cadangan untuk meningkatkan markah anda.
+    Hantar karangan, rumusan, ayat untuk semakan tatabahasa, atau prompt AI untuk dinilai. AI memarkahkan mengikut rubrik SPM
+    (1103 Bahasa Melayu / 1119 English) atau rubrik Prompt Engineering (Asas Kepintaran Buatan) dan memberi cadangan untuk meningkatkan markah anda.
   </p>
 </div>
 
@@ -129,6 +141,7 @@ student_layout_start('Writing Marker', $user, 'writing.php');
               <option value="rumusan">Rumusan (BM)</option>
               <option value="tatabahasa">Tatabahasa / Grammar check</option>
               <option value="upgrade">Upgrade vocabulary</option>
+              <option value="prompt">Prompt Engineering (AI)</option>
             </select>
           </div>
           <div class="field"><label>Language</label>
@@ -148,8 +161,8 @@ student_layout_start('Writing Marker', $user, 'writing.php');
         </div>
 
         <div class="field" id="promptField">
-          <label>Soalan / Essay prompt <span class="muted">(optional)</span></label>
-          <input class="input" name="prompt" placeholder="contoh: Amalan gaya hidup sihat dalam kalangan remaja.">
+          <label id="promptLabel">Soalan / Essay prompt <span class="muted">(optional)</span></label>
+          <input class="input" name="prompt" id="promptInput" placeholder="contoh: Amalan gaya hidup sihat dalam kalangan remaja.">
         </div>
 
         <div class="field" id="sourceField" style="display:none">
@@ -264,11 +277,18 @@ function updateCount() {
   var task = document.getElementById('taskSel');
   var lang = document.getElementById('langSel');
   var promptField = document.getElementById('promptField');
+  var promptLabel = document.getElementById('promptLabel');
+  var promptInput = document.getElementById('promptInput');
   var sourceField = document.getElementById('sourceField');
   var subLabel = document.getElementById('subLabel');
 
+  var DEFAULT_PROMPT_LABEL = promptLabel.innerHTML;
+  var DEFAULT_PROMPT_PH = promptInput.getAttribute('placeholder');
+
   function refresh() {
     var t = task.value, l = lang.value;
+    promptLabel.innerHTML = DEFAULT_PROMPT_LABEL;
+    promptInput.setAttribute('placeholder', DEFAULT_PROMPT_PH);
     if (t === 'rumusan') {
       sourceField.style.display = '';
       promptField.style.display = '';
@@ -281,6 +301,16 @@ function updateCount() {
       sourceField.style.display = 'none';
       promptField.style.display = 'none';
       subLabel.textContent = l === 'en' ? 'Paragraph to upgrade' : 'Perenggan untuk dipertingkatkan';
+    } else if (t === 'prompt') {
+      sourceField.style.display = 'none';
+      promptField.style.display = '';
+      promptLabel.innerHTML = (l === 'en'
+        ? 'What is this prompt meant to do? <span class="muted">(optional context)</span>'
+        : 'Apakah tujuan prompt ini? <span class="muted">(konteks pilihan)</span>');
+      promptInput.setAttribute('placeholder', l === 'en'
+        ? 'e.g. mark a student karangan, summarise a research paper, generate quiz questions'
+        : 'cth. periksa karangan murid, ringkaskan kertas kajian, jana soalan kuiz');
+      subLabel.textContent = l === 'en' ? 'Your prompt (paste the full prompt you wrote)' : 'Prompt anda (tampal prompt penuh yang anda tulis)';
     } else {
       sourceField.style.display = 'none';
       promptField.style.display = '';
@@ -305,6 +335,24 @@ function render_marking_result(array $r): string
     $score   = (int) ($r['score'] ?? 0);
     $maxScore = (int) ($r['max_score'] ?? 0);
     $isUpgrade = isset($r['overall_comment']) || isset($r['upgrades']);
+
+    // Pull the improved prompt out so the errors list shows only real anti-patterns.
+    $improvedPrompt = (string) ($r['improved_prompt'] ?? '');
+    $isPrompt = $improvedPrompt !== '';
+    if (!empty($r['errors']) && is_array($r['errors'])) {
+        $filtered = [];
+        foreach ($r['errors'] as $err) {
+            if (($err['type'] ?? '') === 'improved_prompt') {
+                if ($improvedPrompt === '') {
+                    $improvedPrompt = (string) ($err['corrected'] ?? '');
+                    $isPrompt = $improvedPrompt !== '';
+                }
+                continue;
+            }
+            $filtered[] = $err;
+        }
+        $r['errors'] = $filtered;
+    }
     ?>
     <div class="score-hero">
       <div>
@@ -329,6 +377,12 @@ function render_marking_result(array $r): string
       <p style="margin:10px 0 0;padding:12px 14px;background:var(--bg-2);border:1px solid var(--border);border-left:3px solid var(--primary);border-radius:8px;font-size:13px;line-height:1.5">
         <?= e((string) $r['overall_comment']) ?>
       </p>
+    <?php endif; ?>
+
+    <?php if ($isPrompt): ?>
+      <h4 style="margin:18px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--primary)">📝 Improved prompt (AI rewrite)</h4>
+      <pre style="margin:0;padding:14px 16px;background:var(--bg-2);border:1px solid var(--border);border-left:3px solid var(--primary);border-radius:8px;font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word;font-family:inherit"><?= e($improvedPrompt) ?></pre>
+      <p class="muted" style="font-size:12px;margin:6px 0 0">Copy this version, try it on Claude or ChatGPT, and compare the answers you get against your original prompt.</p>
     <?php endif; ?>
 
     <?php if ($hasRubric): ?>
@@ -384,15 +438,27 @@ function render_marking_result(array $r): string
     <?php endif; ?>
 
     <?php if (!empty($r['errors'])):
-      $heading = $isUpgrade ? 'Suggested upgrades' : 'Errors found';
-      $arrow   = $isUpgrade ? '→ try' : '→';
+      if ($isPrompt) {
+          $heading = 'Anti-patterns spotted';
+          $arrow   = '⚠';
+      } elseif ($isUpgrade) {
+          $heading = 'Suggested upgrades';
+          $arrow   = '→ try';
+      } else {
+          $heading = 'Errors found';
+          $arrow   = '→';
+      }
     ?>
       <h4 style="margin:18px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)"><?= e($heading) ?> (<?= count($r['errors']) ?>)</h4>
       <div class="err-list">
         <?php foreach ($r['errors'] as $err): ?>
           <div class="err-row">
             <code><?= e((string) ($err['original'] ?? '')) ?></code>
-            <?= e($arrow) ?> <code class="fixed"><?= e((string) ($err['corrected'] ?? '')) ?></code>
+            <?php if (!$isPrompt): ?>
+              <?= e($arrow) ?> <code class="fixed"><?= e((string) ($err['corrected'] ?? '')) ?></code>
+            <?php else: ?>
+              <span style="color:var(--bad);margin:0 4px"><?= e($arrow) ?></span>
+            <?php endif; ?>
             <?php if (!empty($err['rule'])): ?>
               <div class="muted" style="font-size:12px;margin-top:4px"><?= e((string) $err['rule']) ?>
               <?php if (!empty($err['type'])): ?> · <em><?= e((string) $err['type']) ?></em><?php endif; ?>
