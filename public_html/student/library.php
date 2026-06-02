@@ -128,8 +128,11 @@ else:
           <p style="margin:0 0 8px"><a href="<?= url('student/library.php') ?>" class="muted">← All libraries</a></p>
           <h2 style="margin:0 0 6px"><?= e($selected['label']) ?> <span class="muted" style="font-size:14px">(<?= $total ?>)</span></h2>
           <p class="muted" style="margin:0 0 12px"><?= e($selected['description']) ?></p>
+          <?php if ($selected['slug'] === 'sejarah-timeline'): ?>
+            <a class="btn" href="<?= url('student/timeline.php') ?>">Open chronological timeline →</a>
+          <?php endif; ?>
           <?php if (!empty($selected['flashcard'])): ?>
-            <a class="btn" href="<?= url('student/flashcards.php?lib=' . urlencode($selected['slug'])) ?>">Switch to flashcards →</a>
+            <a class="btn <?= $selected['slug'] === 'sejarah-timeline' ? 'btn--ghost' : '' ?>" href="<?= url('student/flashcards.php?lib=' . urlencode($selected['slug'])) ?>">Switch to flashcards →</a>
           <?php endif; ?>
         </div>
 
