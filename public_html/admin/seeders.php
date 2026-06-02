@@ -405,6 +405,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
 
+            case 'psv_kssm':
+                require_once __DIR__ . '/../cron/seed_psv_kssm.php';
+                $r = psv_kssm_run();
+                if (($r['status'] ?? '') !== 'ok') {
+                    $output = ['title' => 'KSSM Pendidikan Seni Visual', 'lines' => [$r['message'] ?? 'Failed.'], 'kind' => 'error'];
+                } else {
+                    $lines = [
+                        'Tajuk: created ' . $r['topics_created'] . ', adopted legacy ' . $r['topics_adopted'] . ', kept ' . $r['topics_kept'] . ' (catalog ' . $r['catalog_topics'] . ')',
+                        'Subtopik: created ' . $r['subtopics_created'] . ', kept ' . $r['subtopics_kept'],
+                        'Kemahiran: created ' . $r['skills_created'] . ', kept ' . $r['skills_kept'],
+                    ];
+                    $lines[] = $r['refs_table']
+                        ? 'Rujukan (tokoh + teknik + istilah): created ' . $r['refs_created'] . ', kept ' . $r['refs_kept']
+                        : 'Rujukan: table missing — run database migrations to enable.';
+                    $lines[] = 'Next: Admin → Topics, filter by PSV, 🤖 Qs to generate apresiasi / teknik / projek banks.';
+                    $output = ['title' => 'KSSM Pendidikan Seni Visual seeded', 'lines' => $lines, 'kind' => 'success'];
+                }
+                break;
+
             case 'physics_kssm':
                 require_once __DIR__ . '/../cron/seed_physics_kssm.php';
                 $r = physics_kssm_run();
@@ -505,6 +524,7 @@ $seeders = [
     ['key' => 'ekonomi_kssm', 'name' => 'KSSM Ekonomi (Tingkatan 4 + 5)', 'desc' => 'Seed the full KSSM SPM Ekonomi syllabus: 11 topik (T4: 4 — Pengenalan kepada Ekonomi, Pasaran, Wang/Bank/Pendapatan, Pengeluaran; T5: 7 sub-topik — Peranan Kerajaan, Penunjuk Ekonomi, Alat Dasar Ekonomi, Globalisasi, Perdagangan Antarabangsa, Imbangan Pembayaran, Kadar Pertukaran Asing) with subtopik + starter kemahiran, plus a Ekonomi concepts bank (~40 entries gabungan istilah + formula — kelangkaan, kos lepas, hukum permintaan/penawaran, keanjalan harga Ed/Es, faktor pengeluaran, AR/MR/MC, IHP, kadar inflasi, kadar pengangguran, KDNK, dasar fiskal/kewangan, cukai progresif/regresif, tarif/kuota/embargo, akaun semasa, devaluation/depreciation, dll.). Run phase23 migration first to enable the concepts table.'],
     ['key' => 'sains_komputer_kssm', 'name' => 'KSSM Sains Komputer (Tingkatan 4 + 5)', 'desc' => 'Seed the full KSSM SPM Sains Komputer syllabus: 21 topik (T4: 13 — Strategi Penyelesaian Masalah, Algoritma, Pemboleh Ubah & Jenis Data, Struktur Kawalan, Amalan Terbaik, Modular & Struktur Data, Pembangunan Aplikasi, Pangkalan Data Hubungan, Reka Bentuk PD, Pembangunan PD, Sistem PD, Reka Bentuk Interaksi, Paparan & Reka Bentuk Skrin; T5: 8 — Komputer & Impak, Seni Bina Komputer, Get Logik, Masa Hadapan Pengkomputeran, Pangkalan Data Lanjutan SQL, Bahasa Penskripan Klien, Bahasa Penskripan Pelayan, Laman Web Interaktif) with subtopik + starter kemahiran, plus a code-snippets + concepts bank (~40 entries — Python (if/else, loops, functions, lists), SQL (CREATE/INSERT/SELECT/UPDATE/DELETE/JOIN/GROUP BY), HTML/CSS/JavaScript, PHP (PDO MySQL, $_POST), penukaran binari/desimal, jadual kebenaran get logik AND/OR/NOT/XOR, keselamatan web (SQL injection, XSS, encryption), normalisasi 1NF/3NF). Run phase24 migration first to enable the concepts table.'],
     ['key' => 'rbt_kssm', 'name' => 'KSSM RBT / Reka Cipta (Tingkatan 4 + 5)', 'desc' => 'Seed the SPM-level Reka Cipta syllabus under the rbt subject slug (full RBT is T1-T3 only — Reka Cipta is the MPEI elective at SPM level): 16 bab (T4: 8 Asas Reka Cipta — Pengenalan, Asas Reka Bentuk, Faktor Pemilihan, Pengenalpastian Masalah, Penyelidikan, Penjanaan Idea, Model Olokan, Lukisan Kerja; T5: 8 dalam 2 kluster — Teknologi Pembuatan (LTK/CAD, Bahan & Mesin, Sistem, Prototaip) + Strategi Pemasaran (Penjenamaan, Pemasaran, Harta Intelek, Pendokumentasian)) with subtopik + starter kemahiran, plus a starter konsep bank (~45 entries — invention/innovation/creativity, elemen reka bentuk, prinsip reka bentuk, ergonomik, SWOT, brainstorming, lukisan ortografik/isometrik/CAD, sistem pneumatik/hidraulik, prototaip, 4P, paten/cap dagangan/hak cipta, MyIPO, dll.). Run phase25 migration first to enable the concepts table.'],
+    ['key' => 'psv_kssm', 'name' => 'KSSM Pendidikan Seni Visual (Tingkatan 4 + 5)', 'desc' => 'Seed the full KSSM SPM Pendidikan Seni Visual syllabus: 17 tajuk (T4: 9 — Alat Kebesaran & Perhiasan Diraja, Seni Lukisan, Seni Catan, Seni Cetakan, Reka Bentuk Landskap, Reka Bentuk Hiasan Dalaman, Seni Ukiran, Seni Reka Grafik, Seni Foto; T5: 8 — Seni Bina, Seni Lukisan T5, Seni Catan T5, Seni Arca, Reka Bentuk Industri, Seni Batik, Reka Grafik/Infografik, Seni Foto Manipulasi & e-Portfolio) merentas 5 bidang DSKP (Sejarah/Apresiasi, Seni Halus, Reka Bentuk, Seni Kraf, Komunikasi Visual) with subtopik + starter kemahiran. Plus a rujukan seni bank (~50 entries — tokoh tempatan (Syed Ahmad Jamal, Latiff Mohidin, Ibrahim Hussein) dan dunia (Van Gogh, Picasso, Monet, Dieter Rams, Jony Ive), teknik (impasto, glazing, stippling, casting, assemblage), istilah (warna primer/komplementari, perspektif, Rule of Thirds, leading lines), motif Melayu (awan larat, pucuk rebung), jenis batik canting/tjap/lukis, bangunan ikonik Malaysia). Run phase26 migration first to enable the references table.'],
     ['key' => 'demo_data',      'name' => 'Demo data (rich)',     'desc' => 'Populate sample students with attempts, subscriptions, a class, a Snap & Check marking and parent reports so dashboards look alive.', 'has_force' => true],
     ['key' => 'weekly_reports', 'name' => 'Generate weekly reports','desc' => 'Generate this week\'s AI parent report for every active student.'],
     ['key' => 'reminders',      'name' => 'Send study reminders', 'desc' => 'Notify students who have not practised yet today (in-app + WhatsApp if configured).'],
