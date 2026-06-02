@@ -241,6 +241,126 @@ JSON;
     ];
 }
 
+/**
+ * Suggest stronger word/phrase swaps for a paragraph using the
+ * subject's reference bank (english_vocabulary / bm_peribahasa) as
+ * preferred recommendations.
+ *
+ * Returns a list of upgrade objects: original, suggestion, reason,
+ * category. Stored into essay_submissions.errors_json so the Writing
+ * Marker can render them with the same upgrade UI.
+ */
+function upgrade_vocabulary(string $submission, string $language = 'en'): array
+{
+    $submission = trim($submission);
+    if ($submission === '') {
+        return ['ok' => false, 'error' => 'Empty submission.'];
+    }
+    if (!ai_enabled()) {
+        return ['ok' => false, 'error' => 'AI key is not configured.'];
+    }
+
+    // Pull the reference bank so the model can preferentially recommend from it.
+    $bank = [];
+    if ($language === 'en') {
+        try {
+            $rows = db_all(
+                "SELECT word, part_of_speech, meaning FROM english_vocabulary
+                 WHERE status = 'active' ORDER BY level DESC, word LIMIT 80"
+            );
+            foreach ($rows as $r) {
+                $bank[] = $r['word'] . ' (' . $r['part_of_speech'] . ') — ' . mb_substr((string) $r['meaning'], 0, 80);
+            }
+        } catch (Throwable $e) {}
+    } else {
+        try {
+            $rows = db_all(
+                "SELECT expression, meaning FROM bm_peribahasa
+                 WHERE status = 'active' ORDER BY id LIMIT 50"
+            );
+            foreach ($rows as $r) {
+                $bank[] = $r['expression'] . ' — ' . mb_substr((string) $r['meaning'], 0, 80);
+            }
+        } catch (Throwable $e) {}
+    }
+    $bankStr = $bank ? implode("\n  ", $bank) : '(no bank available — use general SPM-level vocabulary)';
+
+    if ($language === 'en') {
+        $system = "You are an expert SPM 1119 English tutor helping a student elevate the vocabulary in their writing. "
+            . "Scan the student's paragraph for weak / overused words and short phrases (e.g. 'very good', 'a lot of', 'really nice') "
+            . "and propose 5-10 specific swaps using the band-5 vocabulary bank below WHERE APPROPRIATE. "
+            . "If the bank doesn't contain a fitting replacement, you may suggest other strong SPM-appropriate words.\n\n"
+            . "Vocabulary bank (suggest these by preference):\n  " . $bankStr . "\n\n"
+            . "Rules:\n"
+            . "  - Only suggest swaps that genuinely improve clarity, precision or register.\n"
+            . "  - Do NOT rewrite the whole paragraph — surgical swaps only.\n"
+            . "  - Keep each 'original' to the exact phrase as it appears in the student's text (1-5 words).\n"
+            . "  - Mark the source: 'bank' if from the bank above, 'general' if a different recommendation.\n"
+            . "  - If there are no genuine improvements to make, return an empty 'upgrades' array.";
+    } else {
+        $system = "Anda ialah tutor SPM Bahasa Melayu (1103) yang membantu murid menaikkan tahap kosa kata dalam karangan. "
+            . "Imbas perenggan murid untuk perkataan/frasa biasa-biasa (e.g. 'sangat baik', 'sangat penting') "
+            . "dan cadangkan 5-10 pertukaran spesifik. Jika sesuai, masukkan peribahasa dari bank di bawah "
+            . "untuk menggantikan ayat biasa dengan ungkapan menarik (cara biasa SPM).\n\n"
+            . "Bank peribahasa (cadangkan ini secara keutamaan):\n  " . $bankStr . "\n\n"
+            . "Peraturan:\n"
+            . "  - Cadangkan pertukaran yang benar-benar mengangkat darjah penulisan.\n"
+            . "  - JANGAN tulis semula keseluruhan perenggan — pertukaran berfokus sahaja.\n"
+            . "  - 'original' mestilah frasa yang sama persis dalam karangan murid (1-5 patah perkataan).\n"
+            . "  - Tandai sumber: 'bank' jika dari bank di atas, 'general' jika cadangan lain.";
+    }
+
+    $schema = <<<JSON
+{
+  "upgrades": [
+    {
+      "original": "<exact phrase from the student's text>",
+      "suggestion": "<your replacement>",
+      "reason": "<one short line: why this is better>",
+      "source": "bank | general",
+      "category": "vocabulary | peribahasa | phrase | intensifier"
+    }
+  ],
+  "overall_comment": "<one short paragraph on the vocabulary quality>"
+}
+JSON;
+
+    $user = ($language === 'en' ? "Student's paragraph:\n\"\"\"\n" : "Karangan murid:\n\"\"\"\n") . $submission . "\n\"\"\"\n\n"
+        . ($language === 'en' ? 'Reply with ONLY a JSON object matching this schema:' : 'Pulangkan SATU objek JSON sahaja:') . "\n\n$schema";
+
+    try {
+        $raw = ai_chat($system, [['role' => 'user', 'content' => $user]], 0.3);
+    } catch (Throwable $e) {
+        return ['ok' => false, 'error' => 'AI call failed: ' . $e->getMessage()];
+    }
+
+    $data = parse_first_json_object($raw);
+    if (!$data) {
+        return ['ok' => false, 'error' => 'AI returned unparseable JSON.', 'raw' => $raw];
+    }
+
+    $upgrades = is_array($data['upgrades'] ?? null) ? $data['upgrades'] : [];
+    return [
+        'ok'              => true,
+        'word_count'      => marker_word_count($submission),
+        'score'           => count($upgrades),
+        'max_score'       => 10,
+        'band'            => count($upgrades) === 0
+            ? ($language === 'en' ? 'No upgrades needed' : 'Sudah baik')
+            : ($language === 'en' ? count($upgrades) . ' suggested upgrades' : count($upgrades) . ' cadangan'),
+        'upgrades'        => $upgrades,
+        // Reuse errors_json slot so existing renderer + storage works.
+        'errors'          => array_map(fn($u) => [
+            'original'  => (string) ($u['original']   ?? ''),
+            'corrected' => (string) ($u['suggestion'] ?? ''),
+            'type'      => (string) ($u['category']   ?? 'vocabulary'),
+            'rule'      => (string) ($u['reason']     ?? ''),
+        ], $upgrades),
+        'overall_comment' => (string) ($data['overall_comment'] ?? ''),
+        'raw'             => $raw,
+    ];
+}
+
 /** Persist a submission + AI result into essay_submissions. */
 function save_submission(int $userId, array $params, array $result): int
 {

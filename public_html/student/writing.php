@@ -19,7 +19,7 @@ $savedId  = 0;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tableReady) {
     csrf_check();
     $taskType  = input('task_type');
-    $taskType  = in_array($taskType, ['karangan', 'rumusan', 'tatabahasa'], true) ? $taskType : 'karangan';
+    $taskType  = in_array($taskType, ['karangan', 'rumusan', 'tatabahasa', 'upgrade'], true) ? $taskType : 'karangan';
     $language  = input('language') === 'en' ? 'en' : 'bm';
     $prompt    = trim(input('prompt'));
     $source    = trim(input('source_passage'));
@@ -34,6 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tableReady) {
             $result = mark_karangan($sub, $prompt, $language);
         } elseif ($taskType === 'rumusan') {
             $result = mark_rumusan($sub, $source);
+        } elseif ($taskType === 'upgrade') {
+            $result = upgrade_vocabulary($sub, $language);
         } else {
             $result = mark_tatabahasa($sub, $language);
         }
@@ -126,6 +128,7 @@ student_layout_start('Writing Marker', $user, 'writing.php');
               <option value="karangan">Karangan / Essay</option>
               <option value="rumusan">Rumusan (BM)</option>
               <option value="tatabahasa">Tatabahasa / Grammar check</option>
+              <option value="upgrade">Upgrade vocabulary</option>
             </select>
           </div>
           <div class="field"><label>Language</label>
@@ -274,6 +277,10 @@ function updateCount() {
       sourceField.style.display = 'none';
       promptField.style.display = 'none';
       subLabel.textContent = l === 'en' ? 'Sentence(s) to check' : 'Ayat untuk disemak';
+    } else if (t === 'upgrade') {
+      sourceField.style.display = 'none';
+      promptField.style.display = 'none';
+      subLabel.textContent = l === 'en' ? 'Paragraph to upgrade' : 'Perenggan untuk dipertingkatkan';
     } else {
       sourceField.style.display = 'none';
       promptField.style.display = '';
@@ -297,19 +304,32 @@ function render_marking_result(array $r): string
     $hasRubric = !empty($r['rubric']);
     $score   = (int) ($r['score'] ?? 0);
     $maxScore = (int) ($r['max_score'] ?? 0);
+    $isUpgrade = isset($r['overall_comment']) || isset($r['upgrades']);
     ?>
     <div class="score-hero">
       <div>
-        <div class="score-hero__num"><?= $score ?><span class="score-hero__max"> / <?= $maxScore ?></span></div>
-        <?php if (!empty($r['band'])): ?>
-          <div class="score-hero__band"><?= e((string) $r['band']) ?></div>
+        <?php if ($isUpgrade): ?>
+          <div class="score-hero__band" style="font-size:20px;color:var(--text);text-transform:none;letter-spacing:0;font-weight:700">
+            <?= e((string) ($r['band'] ?? '')) ?>
+          </div>
+        <?php else: ?>
+          <div class="score-hero__num"><?= $score ?><span class="score-hero__max"> / <?= $maxScore ?></span></div>
+          <?php if (!empty($r['band'])): ?>
+            <div class="score-hero__band"><?= e((string) $r['band']) ?></div>
+          <?php endif; ?>
         <?php endif; ?>
       </div>
       <div class="muted" style="font-size:13px">
         Word count: <strong><?= (int) ($r['word_count'] ?? 0) ?></strong><br>
-        AI marked using SPM rubric.
+        <?= $isUpgrade ? 'AI vocabulary review.' : 'AI marked using SPM rubric.' ?>
       </div>
     </div>
+
+    <?php if ($isUpgrade && !empty($r['overall_comment'])): ?>
+      <p style="margin:10px 0 0;padding:12px 14px;background:var(--bg-2);border:1px solid var(--border);border-left:3px solid var(--primary);border-radius:8px;font-size:13px;line-height:1.5">
+        <?= e((string) $r['overall_comment']) ?>
+      </p>
+    <?php endif; ?>
 
     <?php if ($hasRubric): ?>
       <h4 style="margin:18px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Breakdown</h4>
@@ -363,13 +383,16 @@ function render_marking_result(array $r): string
       </div>
     <?php endif; ?>
 
-    <?php if (!empty($r['errors'])): ?>
-      <h4 style="margin:18px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)">Errors found (<?= count($r['errors']) ?>)</h4>
+    <?php if (!empty($r['errors'])):
+      $heading = $isUpgrade ? 'Suggested upgrades' : 'Errors found';
+      $arrow   = $isUpgrade ? '→ try' : '→';
+    ?>
+      <h4 style="margin:18px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)"><?= e($heading) ?> (<?= count($r['errors']) ?>)</h4>
       <div class="err-list">
         <?php foreach ($r['errors'] as $err): ?>
           <div class="err-row">
             <code><?= e((string) ($err['original'] ?? '')) ?></code>
-            → <code class="fixed"><?= e((string) ($err['corrected'] ?? '')) ?></code>
+            <?= e($arrow) ?> <code class="fixed"><?= e((string) ($err['corrected'] ?? '')) ?></code>
             <?php if (!empty($err['rule'])): ?>
               <div class="muted" style="font-size:12px;margin-top:4px"><?= e((string) $err['rule']) ?>
               <?php if (!empty($err['type'])): ?> · <em><?= e((string) $err['type']) ?></em><?php endif; ?>
