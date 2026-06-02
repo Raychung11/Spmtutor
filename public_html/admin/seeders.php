@@ -443,6 +443,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
 
+            case 'bahasa_cina_kssm':
+                require_once __DIR__ . '/../cron/seed_bahasa_cina_kssm.php';
+                $r = bahasa_cina_kssm_run();
+                if (($r['status'] ?? '') !== 'ok') {
+                    $output = ['title' => 'KSSM Bahasa Cina', 'lines' => [$r['message'] ?? 'Failed.'], 'kind' => 'error'];
+                } else {
+                    $lines = [
+                        'Topik: created ' . $r['topics_created'] . ', adopted legacy ' . $r['topics_adopted'] . ', kept ' . $r['topics_kept'] . ' (catalog ' . $r['catalog_topics'] . ')',
+                        'Subtopik: created ' . $r['subtopics_created'] . ', kept ' . $r['subtopics_kept'],
+                        'Kemahiran: created ' . $r['skills_created'] . ', kept ' . $r['skills_kept'],
+                    ];
+                    $lines[] = $r['refs_table']
+                        ? 'Rujukan (成语 + wenyan + pengarang): created ' . $r['refs_created'] . ', kept ' . $r['refs_kept']
+                        : 'Rujukan: table missing — run database migrations to enable.';
+                    $lines[] = 'Next: Admin → Topics, filter by Bahasa Cina, 🤖 Qs to generate 作文 / 阅读 / 文言 banks.';
+                    $output = ['title' => 'KSSM Bahasa Cina seeded', 'lines' => $lines, 'kind' => 'success'];
+                }
+                break;
+
             case 'physics_kssm':
                 require_once __DIR__ . '/../cron/seed_physics_kssm.php';
                 $r = physics_kssm_run();
@@ -545,6 +564,7 @@ $seeders = [
     ['key' => 'rbt_kssm', 'name' => 'KSSM RBT / Reka Cipta (Tingkatan 4 + 5)', 'desc' => 'Seed the SPM-level Reka Cipta syllabus under the rbt subject slug (full RBT is T1-T3 only — Reka Cipta is the MPEI elective at SPM level): 16 bab (T4: 8 Asas Reka Cipta — Pengenalan, Asas Reka Bentuk, Faktor Pemilihan, Pengenalpastian Masalah, Penyelidikan, Penjanaan Idea, Model Olokan, Lukisan Kerja; T5: 8 dalam 2 kluster — Teknologi Pembuatan (LTK/CAD, Bahan & Mesin, Sistem, Prototaip) + Strategi Pemasaran (Penjenamaan, Pemasaran, Harta Intelek, Pendokumentasian)) with subtopik + starter kemahiran, plus a starter konsep bank (~45 entries — invention/innovation/creativity, elemen reka bentuk, prinsip reka bentuk, ergonomik, SWOT, brainstorming, lukisan ortografik/isometrik/CAD, sistem pneumatik/hidraulik, prototaip, 4P, paten/cap dagangan/hak cipta, MyIPO, dll.). Run phase25 migration first to enable the concepts table.'],
     ['key' => 'psv_kssm', 'name' => 'KSSM Pendidikan Seni Visual (Tingkatan 4 + 5)', 'desc' => 'Seed the full KSSM SPM Pendidikan Seni Visual syllabus: 17 tajuk (T4: 9 — Alat Kebesaran & Perhiasan Diraja, Seni Lukisan, Seni Catan, Seni Cetakan, Reka Bentuk Landskap, Reka Bentuk Hiasan Dalaman, Seni Ukiran, Seni Reka Grafik, Seni Foto; T5: 8 — Seni Bina, Seni Lukisan T5, Seni Catan T5, Seni Arca, Reka Bentuk Industri, Seni Batik, Reka Grafik/Infografik, Seni Foto Manipulasi & e-Portfolio) merentas 5 bidang DSKP (Sejarah/Apresiasi, Seni Halus, Reka Bentuk, Seni Kraf, Komunikasi Visual) with subtopik + starter kemahiran. Plus a rujukan seni bank (~50 entries — tokoh tempatan (Syed Ahmad Jamal, Latiff Mohidin, Ibrahim Hussein) dan dunia (Van Gogh, Picasso, Monet, Dieter Rams, Jony Ive), teknik (impasto, glazing, stippling, casting, assemblage), istilah (warna primer/komplementari, perspektif, Rule of Thirds, leading lines), motif Melayu (awan larat, pucuk rebung), jenis batik canting/tjap/lukis, bangunan ikonik Malaysia). Run phase26 migration first to enable the references table.'],
     ['key' => 'sains_kssm', 'name' => 'KSSM Sains (Tingkatan 4 + 5)', 'desc' => 'Seed the full KSSM SPM Sains (integrated science, Arts stream) syllabus: 21 bab (T4: 12 — Langkah Keselamatan Makmal, Bantuan Kecemasan, Teknik Parameter Kesihatan, Teknologi Hijau, Genetik, Sokongan/Pergerakan/Pertumbuhan, Koordinasi Badan, Unsur & Bahan, Kimia Industri, Kimia dalam Perubatan, Daya & Gerakan, Tenaga Nuklear; T5: 9 — Mikroorganisma, Nutrisi & Teknologi Makanan, Kelestarian Alam, Kadar Tindak Balas, Sebatian Karbon, Elektrokimia, Cahaya & Optik, Daya & Tekanan, Teknologi Angkasa Lepas) with subtopik + starter kemahiran. Plus a campuran istilah + formula bank (~50 entries merentas biologi/kimia/fizik — CPR, BMI, DNA, Hukum Mendel, ikatan ionik/kovalen, Proses Sentuhan, Proses Haber, F=ma, Prinsip Archimedes/Bernoulli, isotop, vaksin, hujan asid, kadar tindak balas, alkana/alkena, polimer, elektrolisis, hukum Snell, persamaan kanta 1/f=1/u+1/v, P=ρgh, halaju lepas, Sheikh Muszaphar). Run phase27 migration first to enable the concepts table.'],
+    ['key' => 'bahasa_cina_kssm', 'name' => 'KSSM Bahasa Cina (Tingkatan 4 + 5)', 'desc' => 'Seed the full KSSM SPM Bahasa Cina (华文 6351) syllabus organised by macro skills mirroring the BM seeder: 14 topik (T4: 7 — Pemahaman Bahasa Cina Moden, Pembacaan Wenyan/Klasik, Tatabahasa Asas, Karangan Pendek, Karangan Berpandu, Karangan Berformat, KOMSAS Moden; T5: 7 — Pemahaman Lanjutan, Terjemahan Wenyan, Ringkasan, Karangan Hujahan, Karangan Naratif/Emosi, Puisi Klasik, Karya Klasik Cina) with subtopik dwi-bahasa (Cina + BM) + starter kemahiran. Plus a 成语 chengyu and wenyan reference bank (~40 entries — 一举两得, 画蛇添足, 守株待兔, 亡羊补牢, 愚公移山, 滴水穿石, 锦上添花, 雪中送炭, 三思而行 etc.; kata tugas wenyan 之/而/以/其/也; tokoh sasterawan 李白/杜甫/王维/苏轼/孔子/孟子/鲁迅/冰心/老舍; karya klasik 论语/孟子/大学/中庸; puisi 静夜思/春望/登鹳雀楼) lengkap dengan pinyin, makna BM, makna Cina, contoh dan sumber. Run phase28 migration first to enable the references table.'],
     ['key' => 'demo_data',      'name' => 'Demo data (rich)',     'desc' => 'Populate sample students with attempts, subscriptions, a class, a Snap & Check marking and parent reports so dashboards look alive.', 'has_force' => true],
     ['key' => 'weekly_reports', 'name' => 'Generate weekly reports','desc' => 'Generate this week\'s AI parent report for every active student.'],
     ['key' => 'reminders',      'name' => 'Send study reminders', 'desc' => 'Notify students who have not practised yet today (in-app + WhatsApp if configured).'],
