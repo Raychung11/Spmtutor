@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../inc/auth.php';
 require_once __DIR__ . '/../inc/student_layout.php';
 require_once __DIR__ . '/../inc/reference_libraries.php';
+require_once __DIR__ . '/../inc/flashcard_progress.php';
 
 // Library is open to any logged-in role so teachers / parents can browse too.
 $user = require_login();
@@ -47,10 +48,18 @@ if (!$selected):
         <?php foreach ($list as $lib):
             $count = reference_library_count($lib);
             $unavailable = $count === 0;
+            $dueCount = (!$unavailable && !empty($lib['flashcard']))
+                ? fcp_due_count((int) $user['id'], $lib['slug'], $count)
+                : 0;
         ?>
           <a class="lib-card<?= $unavailable ? ' lib-card--disabled' : '' ?>"
              href="<?= $unavailable ? '#' : url('student/library.php?lib=' . urlencode($lib['slug'])) ?>">
-            <div class="lib-card__title"><?= e($lib['label']) ?></div>
+            <div class="lib-card__title">
+              <?= e($lib['label']) ?>
+              <?php if ($dueCount > 0): ?>
+                <span class="lib-card__due"><?= $dueCount ?> due</span>
+              <?php endif; ?>
+            </div>
             <div class="lib-card__desc"><?= e($lib['description']) ?></div>
             <div class="lib-card__foot">
               <?php if ($unavailable): ?>
@@ -238,7 +247,12 @@ function library_render_card(array $row, array $lib): void
 }
 .lib-card:hover { border-color:var(--primary); transform: translateY(-1px); }
 .lib-card--disabled { opacity:.5; pointer-events:none; }
-.lib-card__title { font-weight:600; font-size:15px; }
+.lib-card__title { font-weight:600; font-size:15px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.lib-card__due {
+  background: var(--primary); color: #fff;
+  font-size:10px; font-weight:700; letter-spacing:.04em;
+  padding:2px 8px; border-radius:999px;
+}
 .lib-card__desc { font-size:13px; color:var(--muted); line-height:1.45; }
 .lib-card__foot { font-size:12px; color:var(--muted); display:flex; gap:6px; margin-top:auto; }
 
