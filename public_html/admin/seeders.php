@@ -367,6 +367,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
 
+            case 'sains_komputer_kssm':
+                require_once __DIR__ . '/../cron/seed_sains_komputer_kssm.php';
+                $r = sains_komputer_kssm_run();
+                if (($r['status'] ?? '') !== 'ok') {
+                    $output = ['title' => 'KSSM Sains Komputer', 'lines' => [$r['message'] ?? 'Failed.'], 'kind' => 'error'];
+                } else {
+                    $lines = [
+                        'Topik: created ' . $r['topics_created'] . ', adopted legacy ' . $r['topics_adopted'] . ', kept ' . $r['topics_kept'] . ' (catalog ' . $r['catalog_topics'] . ')',
+                        'Subtopik: created ' . $r['subtopics_created'] . ', kept ' . $r['subtopics_kept'],
+                        'Kemahiran: created ' . $r['skills_created'] . ', kept ' . $r['skills_kept'],
+                    ];
+                    $lines[] = $r['concepts_table']
+                        ? 'Konsep + code snippets: created ' . $r['concepts_created'] . ', kept ' . $r['concepts_kept']
+                        : 'Konsep + code: table missing — run database migrations to enable.';
+                    $lines[] = 'Next: Admin → Topics, filter by Sains Komputer, 🤖 Qs to generate code / SQL / algoritma banks.';
+                    $output = ['title' => 'KSSM Sains Komputer seeded', 'lines' => $lines, 'kind' => 'success'];
+                }
+                break;
+
             case 'physics_kssm':
                 require_once __DIR__ . '/../cron/seed_physics_kssm.php';
                 $r = physics_kssm_run();
@@ -465,6 +484,7 @@ $seeders = [
     ['key' => 'perakaunan_kssm', 'name' => 'KSSM Prinsip Perakaunan (Tingkatan 4 + 5)', 'desc' => 'Seed the full KSSM SPM Prinsip Perakaunan syllabus: 16 bab (T4: 9 — Pengenalan, Klasifikasi & Persamaan, Dokumen Perniagaan, Buku Catatan Pertama, Lejar, Imbangan Duga, Penyata Kewangan Milikan Tunggal, Pelarasan, Pembetulan Kesilapan; T5: 7 — Analisis Penyata Kewangan, Rekod Tak Lengkap, Kawalan Dalaman, Perkongsian, Syarikat Berhad, Kelab dan Persatuan, Perakaunan Kos) with subtopik + starter kemahiran, plus a formula/nisbah bank (~25 entries — persamaan perakaunan, kos jualan, untung kasar/bersih, susut nilai garis lurus & baki berkurangan, margin untung, ROCE, nisbah semasa & cepat, pusing ganti inventori, faedah perkongsian, dividen syer, titik pulang modal, margin caruman). Run phase21 migration first to enable the formula table.'],
     ['key' => 'perniagaan_kssm', 'name' => 'KSSM Perniagaan (Tingkatan 4 + 5)', 'desc' => 'Seed the full KSSM SPM Perniagaan syllabus: 11 bab (T4: 4 — Tujuan & Pemilikan, Trend Semasa, Visi/Misi/Objektif, Bahagian Fungsian; T5: 7 — Pengurusan Sumber Manusia, Sumber Fizikal/Teknologi, Sumber Pembiayaan, Penyata Kewangan, Persediaan Usahawan, Memulakan Perniagaan, Merancang Pengendalian) with subtopik + starter kemahiran, plus a starter istilah perniagaan bank (~30 entries — pemilikan tunggal/perkongsian/Sdn Bhd/Bhd/koperasi, e-dagang, gig economy, SMART, 4P, SSM, modal teroka, crowdfunding, usahawan, rancangan perniagaan, dll.). Run phase22 migration first to enable the istilah table.'],
     ['key' => 'ekonomi_kssm', 'name' => 'KSSM Ekonomi (Tingkatan 4 + 5)', 'desc' => 'Seed the full KSSM SPM Ekonomi syllabus: 11 topik (T4: 4 — Pengenalan kepada Ekonomi, Pasaran, Wang/Bank/Pendapatan, Pengeluaran; T5: 7 sub-topik — Peranan Kerajaan, Penunjuk Ekonomi, Alat Dasar Ekonomi, Globalisasi, Perdagangan Antarabangsa, Imbangan Pembayaran, Kadar Pertukaran Asing) with subtopik + starter kemahiran, plus a Ekonomi concepts bank (~40 entries gabungan istilah + formula — kelangkaan, kos lepas, hukum permintaan/penawaran, keanjalan harga Ed/Es, faktor pengeluaran, AR/MR/MC, IHP, kadar inflasi, kadar pengangguran, KDNK, dasar fiskal/kewangan, cukai progresif/regresif, tarif/kuota/embargo, akaun semasa, devaluation/depreciation, dll.). Run phase23 migration first to enable the concepts table.'],
+    ['key' => 'sains_komputer_kssm', 'name' => 'KSSM Sains Komputer (Tingkatan 4 + 5)', 'desc' => 'Seed the full KSSM SPM Sains Komputer syllabus: 21 topik (T4: 13 — Strategi Penyelesaian Masalah, Algoritma, Pemboleh Ubah & Jenis Data, Struktur Kawalan, Amalan Terbaik, Modular & Struktur Data, Pembangunan Aplikasi, Pangkalan Data Hubungan, Reka Bentuk PD, Pembangunan PD, Sistem PD, Reka Bentuk Interaksi, Paparan & Reka Bentuk Skrin; T5: 8 — Komputer & Impak, Seni Bina Komputer, Get Logik, Masa Hadapan Pengkomputeran, Pangkalan Data Lanjutan SQL, Bahasa Penskripan Klien, Bahasa Penskripan Pelayan, Laman Web Interaktif) with subtopik + starter kemahiran, plus a code-snippets + concepts bank (~40 entries — Python (if/else, loops, functions, lists), SQL (CREATE/INSERT/SELECT/UPDATE/DELETE/JOIN/GROUP BY), HTML/CSS/JavaScript, PHP (PDO MySQL, $_POST), penukaran binari/desimal, jadual kebenaran get logik AND/OR/NOT/XOR, keselamatan web (SQL injection, XSS, encryption), normalisasi 1NF/3NF). Run phase24 migration first to enable the concepts table.'],
     ['key' => 'demo_data',      'name' => 'Demo data (rich)',     'desc' => 'Populate sample students with attempts, subscriptions, a class, a Snap & Check marking and parent reports so dashboards look alive.', 'has_force' => true],
     ['key' => 'weekly_reports', 'name' => 'Generate weekly reports','desc' => 'Generate this week\'s AI parent report for every active student.'],
     ['key' => 'reminders',      'name' => 'Send study reminders', 'desc' => 'Notify students who have not practised yet today (in-app + WhatsApp if configured).'],
