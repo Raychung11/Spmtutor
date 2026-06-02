@@ -424,6 +424,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
 
+            case 'sains_kssm':
+                require_once __DIR__ . '/../cron/seed_sains_kssm.php';
+                $r = sains_kssm_run();
+                if (($r['status'] ?? '') !== 'ok') {
+                    $output = ['title' => 'KSSM Sains', 'lines' => [$r['message'] ?? 'Failed.'], 'kind' => 'error'];
+                } else {
+                    $lines = [
+                        'Bab: created ' . $r['topics_created'] . ', adopted legacy ' . $r['topics_adopted'] . ', kept ' . $r['topics_kept'] . ' (catalog ' . $r['catalog_topics'] . ')',
+                        'Subtopik: created ' . $r['subtopics_created'] . ', kept ' . $r['subtopics_kept'],
+                        'Kemahiran: created ' . $r['skills_created'] . ', kept ' . $r['skills_kept'],
+                    ];
+                    $lines[] = $r['concepts_table']
+                        ? 'Konsep (istilah + formula): created ' . $r['concepts_created'] . ', kept ' . $r['concepts_kept']
+                        : 'Konsep: table missing — run database migrations to enable.';
+                    $lines[] = 'Next: Admin → Topics, filter by Sains, 🤖 Qs to generate KBAT / pengiraan / esei banks.';
+                    $output = ['title' => 'KSSM Sains seeded', 'lines' => $lines, 'kind' => 'success'];
+                }
+                break;
+
             case 'physics_kssm':
                 require_once __DIR__ . '/../cron/seed_physics_kssm.php';
                 $r = physics_kssm_run();
@@ -525,6 +544,7 @@ $seeders = [
     ['key' => 'sains_komputer_kssm', 'name' => 'KSSM Sains Komputer (Tingkatan 4 + 5)', 'desc' => 'Seed the full KSSM SPM Sains Komputer syllabus: 21 topik (T4: 13 — Strategi Penyelesaian Masalah, Algoritma, Pemboleh Ubah & Jenis Data, Struktur Kawalan, Amalan Terbaik, Modular & Struktur Data, Pembangunan Aplikasi, Pangkalan Data Hubungan, Reka Bentuk PD, Pembangunan PD, Sistem PD, Reka Bentuk Interaksi, Paparan & Reka Bentuk Skrin; T5: 8 — Komputer & Impak, Seni Bina Komputer, Get Logik, Masa Hadapan Pengkomputeran, Pangkalan Data Lanjutan SQL, Bahasa Penskripan Klien, Bahasa Penskripan Pelayan, Laman Web Interaktif) with subtopik + starter kemahiran, plus a code-snippets + concepts bank (~40 entries — Python (if/else, loops, functions, lists), SQL (CREATE/INSERT/SELECT/UPDATE/DELETE/JOIN/GROUP BY), HTML/CSS/JavaScript, PHP (PDO MySQL, $_POST), penukaran binari/desimal, jadual kebenaran get logik AND/OR/NOT/XOR, keselamatan web (SQL injection, XSS, encryption), normalisasi 1NF/3NF). Run phase24 migration first to enable the concepts table.'],
     ['key' => 'rbt_kssm', 'name' => 'KSSM RBT / Reka Cipta (Tingkatan 4 + 5)', 'desc' => 'Seed the SPM-level Reka Cipta syllabus under the rbt subject slug (full RBT is T1-T3 only — Reka Cipta is the MPEI elective at SPM level): 16 bab (T4: 8 Asas Reka Cipta — Pengenalan, Asas Reka Bentuk, Faktor Pemilihan, Pengenalpastian Masalah, Penyelidikan, Penjanaan Idea, Model Olokan, Lukisan Kerja; T5: 8 dalam 2 kluster — Teknologi Pembuatan (LTK/CAD, Bahan & Mesin, Sistem, Prototaip) + Strategi Pemasaran (Penjenamaan, Pemasaran, Harta Intelek, Pendokumentasian)) with subtopik + starter kemahiran, plus a starter konsep bank (~45 entries — invention/innovation/creativity, elemen reka bentuk, prinsip reka bentuk, ergonomik, SWOT, brainstorming, lukisan ortografik/isometrik/CAD, sistem pneumatik/hidraulik, prototaip, 4P, paten/cap dagangan/hak cipta, MyIPO, dll.). Run phase25 migration first to enable the concepts table.'],
     ['key' => 'psv_kssm', 'name' => 'KSSM Pendidikan Seni Visual (Tingkatan 4 + 5)', 'desc' => 'Seed the full KSSM SPM Pendidikan Seni Visual syllabus: 17 tajuk (T4: 9 — Alat Kebesaran & Perhiasan Diraja, Seni Lukisan, Seni Catan, Seni Cetakan, Reka Bentuk Landskap, Reka Bentuk Hiasan Dalaman, Seni Ukiran, Seni Reka Grafik, Seni Foto; T5: 8 — Seni Bina, Seni Lukisan T5, Seni Catan T5, Seni Arca, Reka Bentuk Industri, Seni Batik, Reka Grafik/Infografik, Seni Foto Manipulasi & e-Portfolio) merentas 5 bidang DSKP (Sejarah/Apresiasi, Seni Halus, Reka Bentuk, Seni Kraf, Komunikasi Visual) with subtopik + starter kemahiran. Plus a rujukan seni bank (~50 entries — tokoh tempatan (Syed Ahmad Jamal, Latiff Mohidin, Ibrahim Hussein) dan dunia (Van Gogh, Picasso, Monet, Dieter Rams, Jony Ive), teknik (impasto, glazing, stippling, casting, assemblage), istilah (warna primer/komplementari, perspektif, Rule of Thirds, leading lines), motif Melayu (awan larat, pucuk rebung), jenis batik canting/tjap/lukis, bangunan ikonik Malaysia). Run phase26 migration first to enable the references table.'],
+    ['key' => 'sains_kssm', 'name' => 'KSSM Sains (Tingkatan 4 + 5)', 'desc' => 'Seed the full KSSM SPM Sains (integrated science, Arts stream) syllabus: 21 bab (T4: 12 — Langkah Keselamatan Makmal, Bantuan Kecemasan, Teknik Parameter Kesihatan, Teknologi Hijau, Genetik, Sokongan/Pergerakan/Pertumbuhan, Koordinasi Badan, Unsur & Bahan, Kimia Industri, Kimia dalam Perubatan, Daya & Gerakan, Tenaga Nuklear; T5: 9 — Mikroorganisma, Nutrisi & Teknologi Makanan, Kelestarian Alam, Kadar Tindak Balas, Sebatian Karbon, Elektrokimia, Cahaya & Optik, Daya & Tekanan, Teknologi Angkasa Lepas) with subtopik + starter kemahiran. Plus a campuran istilah + formula bank (~50 entries merentas biologi/kimia/fizik — CPR, BMI, DNA, Hukum Mendel, ikatan ionik/kovalen, Proses Sentuhan, Proses Haber, F=ma, Prinsip Archimedes/Bernoulli, isotop, vaksin, hujan asid, kadar tindak balas, alkana/alkena, polimer, elektrolisis, hukum Snell, persamaan kanta 1/f=1/u+1/v, P=ρgh, halaju lepas, Sheikh Muszaphar). Run phase27 migration first to enable the concepts table.'],
     ['key' => 'demo_data',      'name' => 'Demo data (rich)',     'desc' => 'Populate sample students with attempts, subscriptions, a class, a Snap & Check marking and parent reports so dashboards look alive.', 'has_force' => true],
     ['key' => 'weekly_reports', 'name' => 'Generate weekly reports','desc' => 'Generate this week\'s AI parent report for every active student.'],
     ['key' => 'reminders',      'name' => 'Send study reminders', 'desc' => 'Notify students who have not practised yet today (in-app + WhatsApp if configured).'],
