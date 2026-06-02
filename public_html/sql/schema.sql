@@ -1253,13 +1253,19 @@ CREATE TABLE IF NOT EXISTS essay_submissions (
   errors_json     TEXT NULL,
   ai_raw          MEDIUMTEXT NULL,
   status          VARCHAR(20) NOT NULL DEFAULT 'pending',
+  teacher_user_id INT NULL,
+  teacher_score_override INT NULL,
+  teacher_comment TEXT NULL,
+  reviewed_at     DATETIME NULL,
   error_message   TEXT NULL,
   created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   marked_at       DATETIME NULL,
   INDEX idx_es_user (user_id),
   INDEX idx_es_subject (subject_id),
   INDEX idx_es_task (task_type),
-  INDEX idx_es_status (status)
+  INDEX idx_es_status (status),
+  INDEX idx_es_reviewed (reviewed_at),
+  INDEX idx_es_teacher (teacher_user_id)
 ) ENGINE=InnoDB;
 
 -- =====================================================================
