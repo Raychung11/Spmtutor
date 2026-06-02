@@ -255,6 +255,28 @@ function reference_libraries(): array
             'search_cols' => ['name', 'description', 'origin'],
             'tag_col' => 'category',
         ],
+
+        // -------- Pioneer Track: AI Foundations --------
+        [
+            'slug' => 'ai-concepts', 'table' => 'ai_concepts',
+            'subject_slug' => 'kepintaran-buatan', 'label' => 'AI Konsep, Code & Prompts',
+            'description' => 'Istilah AI/ML (transformer, RAG, RLHF), Python code snippets, dan prompt engineering patterns.',
+            'language' => 'en',
+            'card' => ['title' => 'name', 'expression' => 'code_snippet', 'body' => 'definition', 'subtitle' => 'category'],
+            'flashcard' => ['front' => 'name', 'back' => 'definition', 'back_extra' => 'example'],
+            'search_cols' => ['name', 'definition', 'code_snippet', 'example'],
+            'tag_col' => 'category',
+        ],
+        [
+            'slug' => 'ai-timeline', 'table' => 'ai_timeline',
+            'subject_slug' => 'kepintaran-buatan', 'label' => 'AI Timeline',
+            'description' => 'Peristiwa penting AI dari 1950 Turing Test → 2025 reasoning models (o1, Claude 3.7, DeepSeek R1).',
+            'language' => 'en',
+            'card' => ['title' => 'title', 'expression' => 'year_label', 'body' => 'description', 'subtitle' => 'era'],
+            'flashcard' => ['front' => 'title', 'back' => 'year_label', 'back_extra' => 'description'],
+            'search_cols' => ['title', 'description', 'year_label'],
+            'tag_col' => 'era',
+        ],
     ];
 }
 

@@ -279,6 +279,7 @@ function subject_default_traits(string $slug): array
         'pendidikan-moral'                                    => ['religious',  'Bahasa Melayu'],
         'perakaunan', 'perniagaan', 'ekonomi'                 => ['commerce',   'Bahasa Melayu'],
         'sains-komputer'                                      => ['technology', 'English'],
+        'kepintaran-buatan'                                   => ['technology', 'English'],
         'rbt'                                                 => ['technology', 'Bahasa Melayu'],
         'psv'                                                 => ['general',    'Bahasa Melayu'],
         default                                               => ['general',    'English'],

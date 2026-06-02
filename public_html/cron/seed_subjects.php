@@ -45,6 +45,9 @@ function seed_subjects_catalog(): array
         ['slug' => 'tasawwur-islam',   'name' => 'Tasawwur Islam',                     'icon' => 'mosque',    'description' => 'Islamic worldview elective.',                            'sort_order' => 60],
         ['slug' => 'pqs',              'name' => 'Pendidikan Al-Quran dan Al-Sunnah',  'icon' => 'mosque',    'description' => 'Al-Quran and Al-Sunnah studies (PQS).',                  'sort_order' => 61],
         ['slug' => 'psi',              'name' => 'Pendidikan Syariah Islamiah',        'icon' => 'mosque',    'description' => 'Islamic Shariah studies (PSI).',                         'sort_order' => 62],
+
+        // ---- Pioneer Track: AI literacy elective (not yet in KSSM DSKP) ----
+        ['slug' => 'kepintaran-buatan','name' => 'Asas Kepintaran Buatan',             'icon' => 'cpu',       'description' => 'Pioneer AI literacy elective — AI fundamentals, prompt engineering, ethics, generative AI.', 'sort_order' => 70],
     ];
 }
 
