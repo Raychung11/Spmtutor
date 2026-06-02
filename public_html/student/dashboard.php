@@ -3,6 +3,8 @@ declare(strict_types=1);
 require_once __DIR__ . '/../inc/auth.php';
 require_once __DIR__ . '/../inc/progress.php';
 require_once __DIR__ . '/../inc/schools.php';
+require_once __DIR__ . '/../inc/reference_libraries.php';
+require_once __DIR__ . '/../inc/flashcard_progress.php';
 require_once __DIR__ . '/../inc/student_layout.php';
 
 $user = require_role('student');
@@ -22,6 +24,44 @@ $weak = db_all(
 $badges       = db_all('SELECT b.name, b.description FROM student_badges sb JOIN badges b ON b.id = sb.badge_id WHERE sb.user_id = ? ORDER BY sb.earned_at DESC', [$uid]);
 $schoolLinks  = user_schools($uid, 'student');
 
+// ---- "Today's actions" widget metrics ----
+// New questions = active questions the student hasn't attempted yet.
+$newQs = (int) (db_one(
+    "SELECT COUNT(*) c FROM questions q
+     LEFT JOIN question_attempts qa ON qa.question_id = q.id AND qa.user_id = ?
+     WHERE q.status = 'active' AND qa.id IS NULL",
+    [$uid]
+)['c'] ?? 0);
+
+// Unreviewed essays = student's own marked submissions still awaiting teacher review.
+$essaysTableReady = (bool) db_one(
+    "SELECT 1 AS x FROM information_schema.TABLES
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'essay_submissions'"
+);
+$reviewColsReady = $essaysTableReady && (bool) db_one(
+    "SELECT 1 AS x FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'essay_submissions' AND COLUMN_NAME = 'reviewed_at'"
+);
+$unreviewedEssays = 0;
+if ($reviewColsReady) {
+    $unreviewedEssays = (int) (db_one(
+        "SELECT COUNT(*) c FROM essay_submissions
+         WHERE user_id = ? AND status = 'marked' AND reviewed_at IS NULL",
+        [$uid]
+    )['c'] ?? 0);
+}
+
+// Due flashcards = sum across every library the student has cards due in.
+$dueFlashcards = 0;
+if (fcp_table_ready()) {
+    foreach (reference_libraries() as $lib) {
+        if (empty($lib['flashcard'])) continue;
+        $count = reference_library_count($lib);
+        if ($count === 0) continue;
+        $dueFlashcards += fcp_due_count($uid, $lib['slug'], $count);
+    }
+}
+
 student_layout_start('Dashboard', $user, 'dashboard.php');
 ?>
 <div class="grid grid--4">
@@ -30,6 +70,53 @@ student_layout_start('Dashboard', $user, 'dashboard.php');
   <div class="card stat"><div class="stat__value"><?= (int)$streak['current_streak'] ?> 🔥</div><div class="stat__label">Day streak</div></div>
   <div class="card stat"><div class="stat__value">Lv <?= (int)$profile['level'] ?></div><div class="stat__label"><?= (int)$profile['xp'] ?> XP</div></div>
 </div>
+
+<h3 style="margin:24px 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">Today's actions</h3>
+<div class="grid grid--3 actions-grid">
+  <a class="action-card action-card--<?= $newQs > 0 ? 'live' : 'idle' ?>" href="<?= url('student/practice.php') ?>">
+    <div class="action-card__num"><?= $newQs ?></div>
+    <div class="action-card__label">New questions to try</div>
+    <div class="action-card__hint muted">
+      <?= $newQs > 0 ? 'Start practising →' : 'You\'ve seen everything!' ?>
+    </div>
+  </a>
+
+  <a class="action-card action-card--<?= $unreviewedEssays > 0 ? 'live' : 'idle' ?>" href="<?= url('student/writing.php') ?>">
+    <div class="action-card__num"><?= $unreviewedEssays ?></div>
+    <div class="action-card__label">Essays awaiting teacher</div>
+    <div class="action-card__hint muted">
+      <?= $unreviewedEssays > 0 ? 'Your teacher will review soon →' : 'Submit a karangan →' ?>
+    </div>
+  </a>
+
+  <a class="action-card action-card--<?= $dueFlashcards > 0 ? 'live' : 'idle' ?>" href="<?= url('student/library.php') ?>">
+    <div class="action-card__num"><?= $dueFlashcards ?></div>
+    <div class="action-card__label">Flashcards due now</div>
+    <div class="action-card__hint muted">
+      <?= $dueFlashcards > 0 ? 'Open Library to review →' : 'Pick a library to start →' ?>
+    </div>
+  </a>
+</div>
+
+<style>
+.actions-grid { gap: 14px; }
+.action-card {
+  display:flex; flex-direction:column; gap:8px;
+  padding:18px 20px;
+  background:var(--card-2);
+  border:1px solid var(--border);
+  border-radius:14px;
+  text-decoration:none;
+  color:inherit;
+  transition: border-color .15s, transform .15s, box-shadow .15s;
+}
+.action-card:hover { border-color:var(--primary); transform: translateY(-1px); box-shadow:0 4px 18px rgba(139,92,246,.12); }
+.action-card__num { font-size:42px; font-weight:800; line-height:1; color:var(--primary); }
+.action-card__label { font-size:14px; font-weight:600; }
+.action-card__hint { font-size:12px; }
+.action-card--idle .action-card__num { color: var(--muted); }
+.action-card--live { border-left: 3px solid var(--primary); }
+</style>
 
 <?php if ($schoolLinks): ?>
   <div class="card" style="margin-top:18px">
