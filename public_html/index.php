@@ -129,19 +129,86 @@ render_head('Your personal AI tutor');
   <div class="container">
     <h2>Subjects we cover</h2>
     <p class="lead">All <?= count($subjects) ?> SPM subjects mapped to the KSSM syllabus and broken down into skills.</p>
-    <div class="grid grid--4">
-      <?php foreach ($subjects as $s): ?>
-        <div class="card feature">
-          <h3><?= e($s['name']) ?></h3>
-          <?php if (!empty($s['description'])): ?>
-            <p class="muted"><?= e($s['description']) ?></p>
-          <?php endif; ?>
+
+    <?php
+    // Group subjects by stream so 24 items don't sprawl across 6 rows of cards.
+    // Pioneer AI elective lives in its own section below — exclude it here.
+    $subjectGroups = [
+        'Sciences' => ['icon' => '🧪', 'slugs' => ['mathematics', 'add-maths', 'physics', 'chemistry', 'biology', 'sains']],
+        'Languages' => ['icon' => '🗣️', 'slugs' => ['bahasa-melayu', 'english', 'bahasa-cina', 'bahasa-tamil', 'bahasa-arab']],
+        'Humanities' => ['icon' => '📜', 'slugs' => ['sejarah', 'geografi', 'pendidikan-islam', 'pendidikan-moral']],
+        'Commerce' => ['icon' => '💼', 'slugs' => ['perakaunan', 'perniagaan', 'ekonomi']],
+        'Technology & Arts' => ['icon' => '💻', 'slugs' => ['sains-komputer', 'rbt', 'psv']],
+        'Religious electives' => ['icon' => '🕌', 'slugs' => ['tasawwur-islam', 'pqs', 'psi']],
+    ];
+
+    $subjectsBySlug = [];
+    foreach ($subjects as $s) {
+        $subjectsBySlug[$s['slug']] = $s;
+    }
+    ?>
+
+    <div class="subj-groups">
+      <?php foreach ($subjectGroups as $label => $g):
+        $items = [];
+        foreach ($g['slugs'] as $slug) {
+            if (isset($subjectsBySlug[$slug])) {
+                $items[] = $subjectsBySlug[$slug];
+                unset($subjectsBySlug[$slug]);
+            }
+        }
+        if (!$items) continue;
+      ?>
+        <div class="subj-group">
+          <h4 class="subj-group__head"><span class="subj-group__icon"><?= e($g['icon']) ?></span> <?= e($label) ?> <span class="muted" style="font-weight:400;font-size:13px">· <?= count($items) ?></span></h4>
+          <div class="subj-chips">
+            <?php foreach ($items as $s): ?>
+              <span class="subj-chip"><?= e($s['name']) ?></span>
+            <?php endforeach; ?>
+          </div>
         </div>
       <?php endforeach; ?>
+
+      <?php // Anything that didn't match a known group (excluding the Pioneer AI elective).
+      $remaining = array_filter($subjectsBySlug, fn($s) => $s['slug'] !== 'kepintaran-buatan');
+      if ($remaining): ?>
+        <div class="subj-group">
+          <h4 class="subj-group__head"><span class="subj-group__icon">📚</span> Other</h4>
+          <div class="subj-chips">
+            <?php foreach ($remaining as $s): ?>
+              <span class="subj-chip"><?= e($s['name']) ?></span>
+            <?php endforeach; ?>
+          </div>
+        </div>
+      <?php endif; ?>
+
       <?php if (!$subjects): ?><p class="muted">Subjects coming soon.</p><?php endif; ?>
     </div>
+
+    <p class="muted center" style="margin-top:18px;font-size:13px">
+      Plus a Pioneer Track AI elective — see below. ↓
+    </p>
   </div>
 </section>
+
+<style>
+.subj-groups { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 32px; margin-top: 8px; }
+.subj-group__head { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; display: flex; align-items: center; gap: 6px; font-weight: 600; }
+.subj-group__icon { font-size: 16px; }
+.subj-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.subj-chip {
+  display: inline-block;
+  padding: 7px 14px;
+  background: var(--card-2, rgba(255,255,255,0.04));
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--text);
+  transition: border-color .15s, background .15s;
+}
+.subj-chip:hover { border-color: var(--primary); background: rgba(139,92,246,.08); }
+@media (max-width: 760px) { .subj-groups { grid-template-columns: 1fr; gap: 18px; } }
+</style>
 
 <section class="section section--alt" id="pioneer">
   <div class="container">
