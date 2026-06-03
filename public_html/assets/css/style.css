@@ -251,10 +251,11 @@ footer.site { border-top: 1px solid var(--border); padding: 30px 0; color: var(-
 .band .lead { opacity: .92; }
 .band .btn { background: #fff; color: var(--primary-2); }
 
-.lfooter { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 24px; text-align: left; }
+.lfooter { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 24px; text-align: left; align-items: start; }
 .lfooter strong { display: block; color: var(--text); margin-bottom: 10px; }
 .lfooter a { display: block; color: var(--muted); padding: 4px 0; font-size: 14px; }
-@media (max-width: 760px) { .lfooter { grid-template-columns: 1fr; } }
+@media (max-width: 960px) { .lfooter { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .lfooter { grid-template-columns: 1fr; } }
 
 /* ============================================================
    Apple-style scroll reveal (roll in / out)
