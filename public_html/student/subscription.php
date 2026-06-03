@@ -88,5 +88,11 @@ student_layout_start('Subscription', $user, 'subscription.php');
 <?php endif; ?>
 
 <p class="muted" style="margin-top:14px">Payments are processed by Billplz. <?= BILLPLZ_API_KEY === '' ? 'Currently in demo mode (no gateway key configured) — plans activate instantly for testing.' : '' ?></p>
+<p class="muted" style="margin-top:6px;font-size:13px">
+  Subscriptions auto-renew until cancelled. We offer a <strong>7-day money-back guarantee</strong> on your first paid subscription —
+  see the <a href="<?= url('refund.php') ?>" target="_blank">Refund Policy</a> for details.
+  By subscribing you agree to our <a href="<?= url('terms.php') ?>" target="_blank">Terms</a>
+  and <a href="<?= url('privacy.php') ?>" target="_blank">Privacy Policy</a>.
+</p>
 <?php
 student_layout_end();

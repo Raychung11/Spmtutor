@@ -116,6 +116,13 @@ render_head('Create account');
       </div>
       <div class="field"><label>Password * (min 8 chars)</label><input class="input" type="password" name="password" required></div>
       <button class="btn btn--block" type="submit">Create account</button>
+      <p class="muted center" style="font-size:12px;margin:12px 0 0;line-height:1.5">
+        By creating an account, you agree to our
+        <a href="<?= url('terms.php') ?>" target="_blank">Terms &amp; Conditions</a>,
+        <a href="<?= url('privacy.php') ?>" target="_blank">Privacy Policy</a> and
+        <a href="<?= url('refund.php') ?>" target="_blank">Refund Policy</a>.
+        If you are under 18, you confirm a parent or guardian has consented.
+      </p>
     </form>
     <p class="center muted" style="margin-top:16px">Already have an account? <a href="<?= url('login.php') ?>">Log in</a></p>
     <p class="center muted">Registering a school or learning centre? <a href="<?= url('register-school.php') ?>">School signup</a></p>

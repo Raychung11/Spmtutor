@@ -96,6 +96,21 @@ function dash_footer(): void
     </div>
   </main>
 </div>
+<footer class="dash-foot">
+  <div class="container dash-foot__inner">
+    <span class="muted">&copy; <?= date('Y') ?> <?= e(APP_NAME) ?>.</span>
+    <a href="<?= url('privacy.php') ?>">Privacy</a>
+    <a href="<?= url('terms.php') ?>">Terms</a>
+    <a href="<?= url('refund.php') ?>">Refund</a>
+    <a href="<?= url('') ?>#contact">Contact</a>
+  </div>
+</footer>
+<style>
+.dash-foot { margin-top: 32px; padding: 14px 0 18px; border-top: 1px solid var(--border); }
+.dash-foot__inner { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; justify-content: center; font-size: 13px; }
+.dash-foot__inner a { color: var(--muted); text-decoration: none; }
+.dash-foot__inner a:hover { color: var(--primary); }
+</style>
 <script src="<?= url('assets/js/app.js') ?>?v=<?= $jsVer ?>"></script>
 </body>
 </html><?php

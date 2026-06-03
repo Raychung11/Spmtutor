@@ -66,6 +66,11 @@ render_head('Log in');
       <a href="<?= url('forgot-password.php') ?>">Forgot password?</a>
     </p>
     <p class="center muted">No account? <a href="<?= url('register.php') ?>">Start free</a></p>
+    <p class="center muted" style="margin-top:14px;font-size:12px">
+      <a href="<?= url('privacy.php') ?>">Privacy</a> &middot;
+      <a href="<?= url('terms.php') ?>">Terms</a> &middot;
+      <a href="<?= url('refund.php') ?>">Refund</a>
+    </p>
   </div>
 </div>
 </body>

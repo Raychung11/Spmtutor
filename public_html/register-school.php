@@ -73,6 +73,12 @@ render_head('Register your school');
       <div class="field"><label>Phone</label><input class="input" name="phone"></div>
       <div class="field"><label>Password * (min 8 chars)</label><input class="input" type="password" name="password" required></div>
       <button class="btn btn--block" type="submit">Register school</button>
+      <p class="muted center" style="font-size:12px;margin:12px 0 0;line-height:1.5">
+        By registering, you agree on behalf of your school to our
+        <a href="<?= url('terms.php') ?>" target="_blank">Terms &amp; Conditions</a>,
+        <a href="<?= url('privacy.php') ?>" target="_blank">Privacy Policy</a> and
+        <a href="<?= url('refund.php') ?>" target="_blank">Refund Policy</a>.
+      </p>
     </form>
     <p class="center muted" style="margin-top:16px">Registering as an individual? <a href="<?= url('register.php') ?>">Student / parent / teacher signup</a></p>
     <p class="center muted">Already have an account? <a href="<?= url('login.php') ?>">Log in</a></p>
