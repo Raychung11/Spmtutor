@@ -508,9 +508,32 @@ function kepintaran_buatan_kssm_run(): array
 {
     $subject = db_one("SELECT id FROM subjects WHERE slug = 'kepintaran-buatan' LIMIT 1");
     if (!$subject) {
-        return ['status' => 'no_subject', 'message' => 'Kepintaran Buatan subject not found. Run install / seed_subjects first.'];
+        // Self-bootstrap: create the SPM subject row on the fly so this
+        // seeder works standalone, without requiring the SPM subjects
+        // seeder to be run first.
+        $level = db_one("SELECT id FROM education_levels WHERE slug = 'spm' LIMIT 1");
+        if (!$level) {
+            return ['status' => 'no_subject', 'message' => 'SPM education level not found — run the main installer first.'];
+        }
+        $newId = db_exec(
+            'INSERT INTO subjects (education_level_id, name, slug, icon, description, sort_order, status)
+             VALUES (?,?,?,?,?,?,?)',
+            [
+                (int) $level['id'],
+                'Asas Kepintaran Buatan',
+                'kepintaran-buatan',
+                'cpu',
+                'Pioneer AI literacy elective — AI fundamentals, prompt engineering, ethics, generative AI.',
+                70,
+                'active',
+            ]
+        );
+        $subjectAutoCreated = true;
+        $sid = (int) $newId;
+    } else {
+        $subjectAutoCreated = false;
+        $sid = (int) $subject['id'];
     }
-    $sid = (int) $subject['id'];
 
     $conceptsTable = (bool) db_one("SELECT 1 AS x FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ai_concepts'");
     $timelineTable = (bool) db_one("SELECT 1 AS x FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ai_timeline'");
@@ -614,21 +637,22 @@ function kepintaran_buatan_kssm_run(): array
     }
 
     return [
-        'status'             => 'ok',
-        'topics_created'     => $topicsCreated,
-        'topics_kept'        => $topicsKept,
-        'topics_adopted'     => $topicsAdopted,
-        'subtopics_created'  => $subCreated,
-        'subtopics_kept'     => $subKept,
-        'skills_created'     => $skillsCreated,
-        'skills_kept'        => $skillsKept,
-        'concepts_created'   => $conceptsCreated,
-        'concepts_kept'      => $conceptsKept,
-        'timeline_created'   => $timelineCreated,
-        'timeline_kept'      => $timelineKept,
-        'catalog_topics'     => count($catalog),
-        'concepts_table'     => $conceptsTable,
-        'timeline_table'     => $timelineTable,
+        'status'                => 'ok',
+        'subject_auto_created'  => $subjectAutoCreated,
+        'topics_created'        => $topicsCreated,
+        'topics_kept'           => $topicsKept,
+        'topics_adopted'        => $topicsAdopted,
+        'subtopics_created'     => $subCreated,
+        'subtopics_kept'        => $subKept,
+        'skills_created'        => $skillsCreated,
+        'skills_kept'           => $skillsKept,
+        'concepts_created'      => $conceptsCreated,
+        'concepts_kept'         => $conceptsKept,
+        'timeline_created'      => $timelineCreated,
+        'timeline_kept'         => $timelineKept,
+        'catalog_topics'        => count($catalog),
+        'concepts_table'        => $conceptsTable,
+        'timeline_table'        => $timelineTable,
     ];
 }
 

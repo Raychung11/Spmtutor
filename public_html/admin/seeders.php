@@ -506,11 +506,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (($r['status'] ?? '') !== 'ok') {
                     $output = ['title' => 'Pioneer Asas Kepintaran Buatan', 'lines' => [$r['message'] ?? 'Failed.'], 'kind' => 'error'];
                 } else {
-                    $lines = [
-                        'Bab: created ' . $r['topics_created'] . ', adopted legacy ' . $r['topics_adopted'] . ', kept ' . $r['topics_kept'] . ' (catalog ' . $r['catalog_topics'] . ')',
-                        'Subtopik: created ' . $r['subtopics_created'] . ', kept ' . $r['subtopics_kept'],
-                        'Kemahiran: created ' . $r['skills_created'] . ', kept ' . $r['skills_kept'],
-                    ];
+                    $lines = [];
+                    if (!empty($r['subject_auto_created'])) {
+                        $lines[] = 'Subject auto-created: Asas Kepintaran Buatan (slug: kepintaran-buatan)';
+                    }
+                    $lines[] = 'Bab: created ' . $r['topics_created'] . ', adopted legacy ' . $r['topics_adopted'] . ', kept ' . $r['topics_kept'] . ' (catalog ' . $r['catalog_topics'] . ')';
+                    $lines[] = 'Subtopik: created ' . $r['subtopics_created'] . ', kept ' . $r['subtopics_kept'];
+                    $lines[] = 'Kemahiran: created ' . $r['skills_created'] . ', kept ' . $r['skills_kept'];
                     $lines[] = $r['concepts_table']
                         ? 'Konsep AI (istilah + code + prompt patterns): created ' . $r['concepts_created'] . ', kept ' . $r['concepts_kept']
                         : 'Konsep AI: table missing — run database migrations to enable.';
