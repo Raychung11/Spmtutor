@@ -97,9 +97,13 @@ INSERT INTO landing_sections (section_key, title, subtitle, body, sort_order) VA
 ON DUPLICATE KEY UPDATE title = VALUES(title), subtitle = VALUES(subtitle), body = VALUES(body);
 
 INSERT INTO testimonials (name, role, quote, sort_order) VALUES
-('Nurul, Parent', 'Parent of SPM student', 'The weekly report finally tells me where my son actually struggles. Game changer.', 1),
-('Wei Jie', 'SPM Student', 'The AI tutor explains step-by-step until I get it. My Add Maths improved a lot.', 2)
-ON DUPLICATE KEY UPDATE quote = VALUES(quote);
+('Nurul',         'Parent of SPM student',         'The weekly report finally tells me where my son actually struggles. Game changer.', 1),
+('Wei Jie',       'SPM Student, SMK Damansara',    'The AI tutor explains step-by-step until I get it. My Add Maths went from C to A-.', 2),
+('Aisyah',        'SPM Student, Penang',           'I love that I can paste my karangan and get a band-5 mark with peribahasa suggestions in seconds.', 3),
+('Cikgu Faridah', 'Bahasa Melayu teacher',         'I assign Snap & Check homework and the AI marks it overnight. My weekend just opened up.', 4),
+('Daniel',        'SPM Student, KL',               'Tried the AI Sandbox to compare Claude vs GPT for my prompt — finally understand what makes a good prompt.', 5),
+('Mr Raj',        'Parent of two SPM students',    'One subscription, both kids covered. The progress dashboard is the first thing I check every morning.', 6)
+ON DUPLICATE KEY UPDATE quote = VALUES(quote), role = VALUES(role);
 
 INSERT INTO faqs (question, answer, sort_order) VALUES
 ('Is there a free trial?', 'Yes, every new student gets a 14-day free trial with one subject.', 1),

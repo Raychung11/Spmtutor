@@ -312,12 +312,83 @@ render_head('Your personal AI tutor');
 <section class="section section--alt">
   <div class="container">
     <h2>Loved by students and parents</h2>
-    <div class="grid grid--2">
-      <?php foreach ($testimonials as $t): ?>
-        <div class="card"><p style="font-size:18px">&ldquo;<?= e($t['quote']) ?>&rdquo;</p><p class="muted"><strong><?= e($t['name']) ?></strong> &middot; <?= e($t['role'] ?? '') ?></p></div>
+    <p class="lead">Real feedback from families using LulusAI today.</p>
+    <div class="testi-carousel" role="region" aria-label="Testimonials, swipe to see more">
+      <?php foreach ($testimonials as $t):
+        $rawName = trim((string) $t['name']);
+        // Strip trailing ", Parent" etc. from name to get a cleaner display + initial.
+        $cleanName = preg_replace('/,.*$/', '', $rawName) ?: $rawName;
+        $initial = mb_strtoupper(mb_substr($cleanName, 0, 1));
+      ?>
+        <article class="testi">
+          <div class="testi__stars" aria-label="5 out of 5 stars">★★★★★</div>
+          <p class="testi__quote">&ldquo;<?= e((string) $t['quote']) ?>&rdquo;</p>
+          <div class="testi__attrib">
+            <div class="testi__avatar" aria-hidden="true"><?= e($initial) ?></div>
+            <div>
+              <strong><?= e($cleanName) ?></strong>
+              <?php if (!empty($t['role'])): ?>
+                <div class="muted" style="font-size:13px"><?= e((string) $t['role']) ?></div>
+              <?php endif; ?>
+            </div>
+          </div>
+        </article>
       <?php endforeach; ?>
     </div>
+    <p class="muted center testi-hint">← swipe →</p>
   </div>
+</section>
+<style>
+.testi-carousel {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  margin-top: 18px;
+}
+.testi {
+  background: var(--card, rgba(255,255,255,0.03));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.testi__stars { color: #fbbf24; font-size: 14px; letter-spacing: 2px; }
+.testi__quote { font-size: 17px; line-height: 1.55; margin: 0; flex: 1; }
+.testi__attrib { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.testi__avatar {
+  width: 42px; height: 42px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--primary, #8b5cf6), var(--accent, #ec4899));
+  color: #fff; font-weight: 700; font-size: 17px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.testi-hint { display: none; font-size: 12px; margin-top: 10px; letter-spacing: 4px; }
+
+@media (max-width: 880px) {
+  .testi-carousel {
+    display: flex;
+    grid-template-columns: none;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 14px;
+    padding: 4px 20px 14px;
+    margin: 18px -20px 0;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .testi-carousel::-webkit-scrollbar { display: none; }
+  .testi {
+    flex: 0 0 86%;
+    scroll-snap-align: center;
+    padding: 20px;
+  }
+  .testi__quote { font-size: 16px; }
+  .testi-hint { display: block; }
+}
+</style>
 </section>
 <?php endif; ?>
 
