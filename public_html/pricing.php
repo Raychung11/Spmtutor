@@ -52,6 +52,13 @@ render_head('Pricing');
     <p class="center muted" style="margin-top:24px">Payments via Billplz (Stripe coming soon). Phase 2 feature &mdash; checkout is integration-ready.</p>
   </section>
 </div>
-<footer class="site"><div class="container">&copy; <?= date('Y') ?> <?= e(APP_NAME) ?>.</div></footer>
+<footer class="site">
+  <div class="container center muted" style="display:flex;gap:18px;justify-content:center;flex-wrap:wrap;font-size:13px">
+    <span>&copy; <?= date('Y') ?> <?= e(APP_NAME) ?>.</span>
+    <a href="<?= url('privacy.php') ?>">Privacy</a>
+    <a href="<?= url('terms.php') ?>">Terms</a>
+    <a href="<?= url('refund.php') ?>">Refund</a>
+  </div>
+</footer>
 </body>
 </html>

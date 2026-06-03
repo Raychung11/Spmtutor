@@ -316,6 +316,12 @@ render_head('Your personal AI tutor');
       <a href="<?= url('register-school.php') ?>">Schools</a>
       <a href="<?= url('login.php') ?>">Log in</a>
     </div>
+    <div>
+      <strong>Legal</strong>
+      <a href="<?= url('privacy.php') ?>">Privacy Policy</a>
+      <a href="<?= url('terms.php') ?>">Terms &amp; Conditions</a>
+      <a href="<?= url('refund.php') ?>">Refund Policy</a>
+    </div>
   </div>
   <div class="container center muted" style="border-top:1px solid var(--border);padding-top:18px;margin-top:18px">
     &copy; <?= date('Y') ?> <?= e(APP_NAME) ?>. All rights reserved.
