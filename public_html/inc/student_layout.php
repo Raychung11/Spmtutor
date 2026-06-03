@@ -12,6 +12,7 @@ function student_layout_start(string $title, array $user, string $current): void
         ['label' => 'Practice',      'href' => 'student/practice.php',      'primary' => true,  'icon' => '✏️'],
         ['label' => 'Library',       'href' => 'student/library.php',       'primary' => true,  'icon' => '📚'],
         ['label' => 'Writing Marker','href' => 'student/writing.php',       'primary' => true,  'icon' => '✍️'],
+        ['label' => 'AI Sandbox',    'href' => 'student/sandbox.php',                            'icon' => '🧪'],
         ['label' => 'Snap & Check',  'href' => 'student/snap_check.php'],
         ['label' => 'Assignments',   'href' => 'student/assignments.php'],
         ['label' => 'Progress',      'href' => 'student/progress.php',      'primary' => true,  'icon' => '📈'],
