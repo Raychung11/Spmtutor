@@ -90,11 +90,11 @@ ON DUPLICATE KEY UPDATE name = VALUES(name);
 
 -- Landing sections
 INSERT INTO landing_sections (section_key, title, subtitle, body, sort_order) VALUES
-('hero', 'Not just an app. Your personal AI tutor.', 'LulusAI helps students learn, practise, diagnose weaknesses and improve with AI guidance.', 'Start your 14-day free trial today.', 1),
-('features', 'Everything your child needs to improve', 'An AI Skill Education Operating System', 'AI Tutor Chat|Skill Diagnostic|Personalised Learning Path|Practice Questions|Snap & Check marking|Progress Analytics|Parent Dashboard', 2),
+('hero', 'Not just an app. Your personal AI tutor.', 'LulusAI helps SPM students learn, practise and improve with AI guidance across 22 KSSM subjects — plus Malaysia''s first SPM-aligned AI literacy elective.', 'Start your 14-day free trial today.', 1),
+('features', 'Everything an SPM student needs to improve', 'An AI Skill Education Operating System', 'AI Tutor Chat (BM + EN)|AI Writing Marker (Karangan, Rumusan, Prompt Engineering)|40,000+ KSSM-aligned questions|Library + Flashcards with spaced repetition|AI Sandbox — compare LLMs side-by-side|Snap & Check photo marking|Adaptive diagnostic + learning path|Streaks, mastery badges, XP|Parent + teacher dashboards', 2),
 ('parents', 'Built for parents too', 'See real progress, not just screen time', 'Weekly AI reports, weak-area alerts, and recommended action plans keep you in the loop.', 3),
 ('cta', 'Ready to start learning smarter?', 'Join thousands of students improving with LulusAI', 'Create your free account in under a minute.', 4)
-ON DUPLICATE KEY UPDATE title = VALUES(title);
+ON DUPLICATE KEY UPDATE title = VALUES(title), subtitle = VALUES(subtitle), body = VALUES(body);
 
 INSERT INTO testimonials (name, role, quote, sort_order) VALUES
 ('Nurul, Parent', 'Parent of SPM student', 'The weekly report finally tells me where my son actually struggles. Game changer.', 1),
@@ -103,9 +103,10 @@ ON DUPLICATE KEY UPDATE quote = VALUES(quote);
 
 INSERT INTO faqs (question, answer, sort_order) VALUES
 ('Is there a free trial?', 'Yes, every new student gets a 14-day free trial with one subject.', 1),
-('Which syllabus do you support?', 'We focus on the Malaysian syllabus including UPSR, PT3, SPM and STPM.', 2),
+('Which syllabus do you support?', 'We focus on the Malaysian SPM syllabus — KSSM-aligned across all 22 SPM subjects from sciences (Math, Add Maths, Physics, Chemistry, Biology, Sains) to languages (BM, English, Bahasa Cina, Tamil, Arab), humanities (Sejarah, Geografi, Pendidikan Islam, Moral), commerce (Perakaunan, Perniagaan, Ekonomi), technology (Sains Komputer, RBT, PSV) and our Pioneer AI elective.', 2),
 ('Can parents track progress?', 'Yes. Link your parent account to your child to see weekly AI reports and weak areas.', 3),
-('How does AI marking work?', 'Upload a photo of a handwritten answer and our AI reads, marks and explains mistakes. A teacher can review it.', 4)
+('How does AI marking work?', 'Two ways: Snap & Check lets you upload a photo of handwritten work for instant AI marking, and the AI Writing Marker grades Karangan, Rumusan, tatabahasa, vocabulary upgrades and Prompt Engineering submissions against SPM rubrics. A teacher can review any submission.', 4),
+('What is the Asas Kepintaran Buatan (AI) elective?', 'A Pioneer Track elective we created for students who want to be future-ready. 20 bab covering AI fundamentals, machine learning, prompt engineering, ethics, and how AI is changing the Malaysian economy. Comes with hands-on tools (Prompt Engineering Marker + AI Sandbox) so students learn by doing, not just reading.', 5)
 ON DUPLICATE KEY UPDATE answer = VALUES(answer);
 
 INSERT INTO site_settings (setting_key, setting_value) VALUES

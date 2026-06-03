@@ -11,7 +11,8 @@ try {
     foreach (db_all('SELECT * FROM landing_sections WHERE status = "active" ORDER BY sort_order') as $s) {
         $sections[$s['section_key']] = $s;
     }
-    $subjects     = db_all('SELECT * FROM subjects WHERE status = "active" ORDER BY sort_order LIMIT 8');
+    $subjects     = db_all('SELECT * FROM subjects WHERE status = "active" ORDER BY sort_order LIMIT 24');
+    $pioneer      = db_one('SELECT * FROM subjects WHERE slug = "kepintaran-buatan" AND status = "active" LIMIT 1');
     $plans        = db_all('SELECT * FROM subscription_plans WHERE status = "active" ORDER BY sort_order');
     $testimonials = db_all('SELECT * FROM testimonials WHERE status = "active" ORDER BY sort_order');
     $faqs         = db_all('SELECT * FROM faqs WHERE status = "active" ORDER BY sort_order');
@@ -29,14 +30,24 @@ $user     = current_user();
 // Sensible fallback feature list if the CMS section is empty.
 $featureItems = $features ? pipe_list($features['body']) : [];
 if (!$featureItems) {
-    $featureItems = ['AI Tutor Chat', 'Skill Diagnostic', 'Personalised Learning Path', 'Practice Questions', 'Snap & Check marking', 'Progress Analytics'];
+    $featureItems = [
+        'AI Tutor Chat (BM + EN)',
+        'AI Writing Marker (Karangan, Rumusan, Prompt Engineering)',
+        '40,000+ KSSM-aligned questions',
+        'Library + Flashcards with spaced repetition',
+        'AI Sandbox — compare LLMs side-by-side',
+        'Snap & Check photo marking',
+        'Adaptive diagnostic + learning path',
+        'Streaks, mastery badges, XP',
+        'Parent + teacher dashboards',
+    ];
 }
 
 $steps = [
     ['1', 'Diagnose', 'Take a quick diagnostic to reveal your strong and weak topics.'],
-    ['2', 'Learn', 'Follow a personalised learning path and ask the AI tutor anything.'],
+    ['2', 'Learn',    'Follow a personalised learning path and ask the AI tutor anything.'],
     ['3', 'Practise', 'Answer questions and snap a photo of your work for instant AI marking.'],
-    ['4', 'Track', 'Watch your streak, mastery and scores climb — parents see it too.'],
+    ['4', 'Track',    'Watch your streak, mastery and scores climb — parents see it too.'],
 ];
 
 render_head('Your personal AI tutor');
@@ -79,11 +90,11 @@ render_head('Your personal AI tutor');
         <img class="lhero__img" src="<?= url($hero['image_path']) ?>" alt="<?= e(APP_NAME) ?> app screenshot">
       <?php else: ?>
         <div class="chatcard" aria-hidden="true">
-          <div class="chatcard__head"><span class="dot"></span><span class="dot"></span><span class="dot"></span> AI Tutor</div>
-          <div class="msg msg--user">How do I solve 2x + 3 = 11?</div>
-          <div class="msg msg--assistant">Great question! First subtract 3 from both sides → 2x = 8. Now divide by 2. What do you get? 😊</div>
-          <div class="msg msg--user">x = 4!</div>
-          <div class="msg msg--assistant">Exactly — well done! +10 XP 🔥</div>
+          <div class="chatcard__head"><span class="dot"></span><span class="dot"></span><span class="dot"></span> AI Writing Marker</div>
+          <div class="msg msg--user">Tajuk: Amalan gaya hidup sihat dalam kalangan remaja… [karangan 350 patah perkataan]</div>
+          <div class="msg msg--assistant"><strong>78 / 100 · Baik</strong><br>Isi 24/30 · Bahasa 22/30 · Pengolahan 16/20 · Gaya 16/20<br>+ 3 cadangan peribahasa untuk naikkan markah Gaya Bahasa.</div>
+          <div class="msg msg--user">Mana satu peribahasa yang sesuai?</div>
+          <div class="msg msg--assistant">Untuk perenggan 2 cuba "bagai aur dengan tebing" — gambarkan hubungan murid &amp; ibu bapa. 🔥</div>
         </div>
       <?php endif; ?>
     </div>
@@ -117,17 +128,62 @@ render_head('Your personal AI tutor');
 <section class="section" id="subjects">
   <div class="container">
     <h2>Subjects we cover</h2>
-    <p class="lead">Mapped to the Malaysian syllabus and broken down into skills.</p>
+    <p class="lead">All <?= count($subjects) ?> SPM subjects mapped to the KSSM syllabus and broken down into skills.</p>
     <div class="grid grid--4">
       <?php foreach ($subjects as $s): ?>
-        <div class="card feature"><h3><?= e($s['name']) ?></h3><p class="muted"><?= e($s['description'] ?? '') ?></p></div>
+        <div class="card feature">
+          <h3><?= e($s['name']) ?></h3>
+          <?php if (!empty($s['description'])): ?>
+            <p class="muted"><?= e($s['description']) ?></p>
+          <?php endif; ?>
+        </div>
       <?php endforeach; ?>
       <?php if (!$subjects): ?><p class="muted">Subjects coming soon.</p><?php endif; ?>
     </div>
   </div>
 </section>
 
-<section class="section section--alt" id="parents">
+<section class="section section--alt" id="pioneer">
+  <div class="container">
+    <span class="pill" style="display:inline-block;margin-bottom:14px">🚀 Pioneer Track · Malaysia's first SPM-aligned AI elective</span>
+    <h2>Asas Kepintaran Buatan</h2>
+    <p class="lead">
+      A next-generation elective covering AI fundamentals, machine learning, prompt engineering,
+      ethics &amp; the future of work — taught with the same hands-on tools that real AI engineers use.
+    </p>
+    <div class="grid grid--3">
+      <div class="card feature">
+        <h3>📚 20 bab, 80+ subtopik</h3>
+        <p class="muted">
+          Tingkatan 4: Pengenalan AI, Data, Pemikiran Komputasi, ML, Neural Networks, NLP, Computer Vision,
+          Generative AI, Prompt Engineering. Tingkatan 5: Etika, PDPA, Deepfakes, AI &amp; Pekerjaan,
+          Ekonomi Malaysia, Sustainability, Capstone Project.
+        </p>
+      </div>
+      <div class="card feature">
+        <h3>✍️ Prompt Engineering Marker</h3>
+        <p class="muted">
+          Students write a prompt and the AI grades it on 7 criteria (Clarity, Role, Context, Constraints,
+          Output Format, Examples, Robustness) and rewrites it side-by-side — so they learn by comparing
+          their draft to a production-grade version.
+        </p>
+      </div>
+      <div class="card feature">
+        <h3>🧪 AI Sandbox (LLM Compare)</h3>
+        <p class="muted">
+          Send the same prompt to Claude Opus, Sonnet, Haiku, or GPT-4o and watch the responses appear
+          side-by-side. Vote on which is better, add notes, build intuition for how different models
+          think — the way prompt engineers actually do it.
+        </p>
+      </div>
+    </div>
+    <div class="center" style="margin-top:22px">
+      <a class="btn" href="<?= url('register.php') ?>">Try the AI elective free for 14 days</a>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="parents">
   <div class="container lhero__grid">
     <div>
       <h2 style="text-align:left"><?= e($parents['title'] ?? 'Built for parents too') ?></h2>
