@@ -131,83 +131,92 @@ render_head('Your personal AI tutor');
     <p class="lead">All <?= count($subjects) ?> SPM subjects mapped to the KSSM syllabus and broken down into skills.</p>
 
     <?php
-    // Group subjects by stream so 24 items don't sprawl across 6 rows of cards.
-    // Pioneer AI elective lives in its own section below — exclude it here.
-    $subjectGroups = [
-        'Sciences' => ['icon' => '🧪', 'slugs' => ['mathematics', 'add-maths', 'physics', 'chemistry', 'biology', 'sains']],
-        'Languages' => ['icon' => '🗣️', 'slugs' => ['bahasa-melayu', 'english', 'bahasa-cina', 'bahasa-tamil', 'bahasa-arab']],
-        'Humanities' => ['icon' => '📜', 'slugs' => ['sejarah', 'geografi', 'pendidikan-islam', 'pendidikan-moral']],
-        'Commerce' => ['icon' => '💼', 'slugs' => ['perakaunan', 'perniagaan', 'ekonomi']],
-        'Technology & Arts' => ['icon' => '💻', 'slugs' => ['sains-komputer', 'rbt', 'psv']],
-        'Religious electives' => ['icon' => '🕌', 'slugs' => ['tasawwur-islam', 'pqs', 'psi']],
+    // Tag each subject with a category icon for the carousel. Pioneer AI
+    // elective lives in its own section below — exclude it here.
+    $catalogIcons = [
+        'mathematics' => '🧪', 'add-maths' => '🧪', 'physics' => '🧪', 'chemistry' => '🧪', 'biology' => '🧪', 'sains' => '🧪',
+        'bahasa-melayu' => '🗣️', 'english' => '🗣️', 'bahasa-cina' => '🗣️', 'bahasa-tamil' => '🗣️', 'bahasa-arab' => '🗣️',
+        'sejarah' => '📜', 'geografi' => '📜', 'pendidikan-islam' => '📜', 'pendidikan-moral' => '📜',
+        'perakaunan' => '💼', 'perniagaan' => '💼', 'ekonomi' => '💼',
+        'sains-komputer' => '💻', 'rbt' => '💻', 'psv' => '🎨',
+        'tasawwur-islam' => '🕌', 'pqs' => '🕌', 'psi' => '🕌',
     ];
-
-    $subjectsBySlug = [];
-    foreach ($subjects as $s) {
-        $subjectsBySlug[$s['slug']] = $s;
-    }
+    $marqueeSubjects = array_filter($subjects, fn($s) => $s['slug'] !== 'kepintaran-buatan');
+    $marqueeSubjects = array_values($marqueeSubjects);
+    // Split into two rows; row B reverses for the opposite-direction track.
+    $half = (int) ceil(count($marqueeSubjects) / 2);
+    $rowA = array_slice($marqueeSubjects, 0, $half);
+    $rowB = array_reverse(array_slice($marqueeSubjects, $half));
     ?>
 
-    <div class="subj-groups">
-      <?php foreach ($subjectGroups as $label => $g):
-        $items = [];
-        foreach ($g['slugs'] as $slug) {
-            if (isset($subjectsBySlug[$slug])) {
-                $items[] = $subjectsBySlug[$slug];
-                unset($subjectsBySlug[$slug]);
-            }
-        }
-        if (!$items) continue;
-      ?>
-        <div class="subj-group">
-          <h4 class="subj-group__head"><span class="subj-group__icon"><?= e($g['icon']) ?></span> <?= e($label) ?> <span class="muted" style="font-weight:400;font-size:13px">· <?= count($items) ?></span></h4>
-          <div class="subj-chips">
-            <?php foreach ($items as $s): ?>
-              <span class="subj-chip"><?= e($s['name']) ?></span>
+    <div class="subj-marquee" aria-label="All SPM subjects">
+      <div class="subj-marquee__row">
+        <div class="subj-marquee__track">
+          <?php for ($pass = 0; $pass < 2; $pass++): ?>
+            <?php foreach ($rowA as $s): $icon = $catalogIcons[$s['slug']] ?? '📚'; ?>
+              <span class="subj-pill"><span class="subj-pill__icon"><?= e($icon) ?></span><?= e($s['name']) ?></span>
             <?php endforeach; ?>
-          </div>
+          <?php endfor; ?>
         </div>
-      <?php endforeach; ?>
-
-      <?php // Anything that didn't match a known group (excluding the Pioneer AI elective).
-      $remaining = array_filter($subjectsBySlug, fn($s) => $s['slug'] !== 'kepintaran-buatan');
-      if ($remaining): ?>
-        <div class="subj-group">
-          <h4 class="subj-group__head"><span class="subj-group__icon">📚</span> Other</h4>
-          <div class="subj-chips">
-            <?php foreach ($remaining as $s): ?>
-              <span class="subj-chip"><?= e($s['name']) ?></span>
+      </div>
+      <div class="subj-marquee__row">
+        <div class="subj-marquee__track subj-marquee__track--reverse">
+          <?php for ($pass = 0; $pass < 2; $pass++): ?>
+            <?php foreach ($rowB as $s): $icon = $catalogIcons[$s['slug']] ?? '📚'; ?>
+              <span class="subj-pill"><span class="subj-pill__icon"><?= e($icon) ?></span><?= e($s['name']) ?></span>
             <?php endforeach; ?>
-          </div>
+          <?php endfor; ?>
         </div>
-      <?php endif; ?>
-
-      <?php if (!$subjects): ?><p class="muted">Subjects coming soon.</p><?php endif; ?>
+      </div>
     </div>
 
     <p class="muted center" style="margin-top:18px;font-size:13px">
-      Plus a Pioneer Track AI elective — see below. ↓
+      🧪 Sciences · 🗣️ Languages · 📜 Humanities · 💼 Commerce · 💻 Technology · 🎨 Arts · 🕌 Religious electives
+      <br>Plus a Pioneer Track AI elective — see below ↓
     </p>
   </div>
 </section>
 
 <style>
-.subj-groups { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 32px; margin-top: 8px; }
-.subj-group__head { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; display: flex; align-items: center; gap: 6px; font-weight: 600; }
-.subj-group__icon { font-size: 16px; }
-.subj-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.subj-chip {
-  display: inline-block;
-  padding: 7px 14px;
+.subj-marquee {
+  margin-top: 24px;
+  position: relative;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+          mask-image: linear-gradient(to right, transparent, black 6%, black 94%, transparent);
+}
+.subj-marquee__row { display: flex; overflow: hidden; padding: 6px 0; }
+.subj-marquee__track {
+  display: flex;
+  flex-shrink: 0;
+  gap: 12px;
+  padding-right: 12px;
+  animation: subj-marquee 48s linear infinite;
+  will-change: transform;
+}
+.subj-marquee__track--reverse { animation-direction: reverse; animation-duration: 56s; }
+.subj-marquee:hover .subj-marquee__track { animation-play-state: paused; }
+@keyframes subj-marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+.subj-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  flex-shrink: 0;
+  padding: 9px 16px;
   background: var(--card-2, rgba(255,255,255,0.04));
   border: 1px solid var(--border);
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text);
-  transition: border-color .15s, background .15s;
+  white-space: nowrap;
+  transition: border-color .15s, background .15s, transform .15s;
 }
-.subj-chip:hover { border-color: var(--primary); background: rgba(139,92,246,.08); }
-@media (max-width: 760px) { .subj-groups { grid-template-columns: 1fr; gap: 18px; } }
+.subj-pill:hover { border-color: var(--primary); background: rgba(139,92,246,.08); transform: translateY(-1px); }
+.subj-pill__icon { font-size: 15px; line-height: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .subj-marquee__track { animation: none; transform: translateX(0); }
+}
 </style>
 
 <section class="section section--alt" id="pioneer">
