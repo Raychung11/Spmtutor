@@ -563,6 +563,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
 
+            case 'dedupe_subjects':
+                require_once __DIR__ . '/../cron/dedupe_subjects.php';
+                $r = dedupe_subjects_run($force);
+                $kind = $r['groups'] > 0 ? 'success' : 'info';
+                $title = $force ? 'Subject dedupe — applied' : 'Subject dedupe — dry-run';
+                $lines = [
+                    ($force ? 'APPLIED — duplicates have been merged and deleted.' : 'DRY-RUN — tick "Force re-run" below to actually merge + delete.'),
+                    'Duplicate groups:   ' . $r['groups'],
+                    'Duplicate subjects: ' . $r['duplicates'],
+                    'Rows re-pointed:    ' . $r['rows_repointed'],
+                    'Stats conflicts:    ' . $r['stats_conflicts'] . ' (winning row kept, loser dropped)',
+                    'Subjects deleted:   ' . $r['subjects_deleted'],
+                ];
+                foreach ($r['details'] as $d) {
+                    $lines[] = '· ' . $d;
+                }
+                $output = ['title' => $title, 'lines' => $lines, 'kind' => $kind];
+                break;
+
             case 'migrations':
                 $applied = applied_migration_set();
                 $cfg = require __DIR__ . '/../config/db_config.php';
@@ -604,6 +623,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $seeders = [
     ['key' => 'migrations',     'name' => 'Run database migrations', 'desc' => 'Apply any pending sql/migrations/*.sql files (e.g. phase4, phase5, phase6 school portal, phase7 invitations, phase8 leads). Each file runs at most once. Tracks state in an applied_migrations table.', 'has_force' => true],
+    ['key' => 'dedupe_subjects','name' => 'Deduplicate subjects (maintenance)', 'desc' => 'Find subjects that share an (education_level, slug) or (education_level, name) — usually from running an import twice — and merge them. Re-points every dependent row (topics, questions, lessons, diagnostic tests, learning paths, teacher classes, chat sessions, essay submissions, sandbox runs, student stats) to the lowest-id keeper, then deletes the duplicates. Runs as DRY-RUN by default — tick "Force re-run" to actually commit the merge. Note: this dedupes the SUBJECTS rows; if you imported topics/skills twice too, run the matching subject seeder again afterwards (it is idempotent) or ask for a topics-level dedupe.', 'has_force' => true],
     ['key' => 'courses',        'name' => 'Seed courses',         'desc' => 'Add the topics, skills and MCQs from the course catalog (Math, Add Maths, Physics, Chemistry, Biology, English, BM). Idempotent — already-present items are skipped.'],
     ['key' => 'demo_logins',    'name' => 'Demo logins (5 roles)','desc' => 'Create one demo account per role (student, parent, teacher, school admin, platform admin) with predictable credentials and sensible relationships.'],
     ['key' => 'schools',        'name' => 'Klang Valley schools',  'desc' => 'Seed ~100 SMK secondary schools across KL, PJ, Shah Alam, Subang, Klang, Kajang, Cheras, Puchong, Bangi, Cyberjaya and Putrajaya. Idempotent — schools already present (by name) are skipped.'],
