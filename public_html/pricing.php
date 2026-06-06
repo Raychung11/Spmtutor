@@ -21,6 +21,7 @@ render_head('Pricing');
         <a href="<?= url('login.php') ?>">Log in</a>
         <a class="btn btn--sm" href="<?= url('register.php') ?>">Start free</a>
       <?php endif; ?>
+      <?php theme_toggle_button(); ?>
     </div>
   </nav>
 

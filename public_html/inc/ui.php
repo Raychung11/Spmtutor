@@ -18,9 +18,32 @@ function render_head(string $title): void
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= e($title) ?> &middot; <?= e($name) ?></title>
+<script>
+// Apply theme before paint so there is no flash-of-wrong-theme.
+(function(){
+  try {
+    var t = localStorage.getItem('lulusai-theme');
+    if (t === 'light' || t === 'dark') {
+      document.documentElement.dataset.theme = t;
+    }
+  } catch (e) {}
+})();
+</script>
 <link rel="stylesheet" href="<?= url('assets/css/style.css') ?>?v=<?= $cssVer ?>">
 </head>
 <body><?php
+}
+
+/** Render a theme-toggle button (sun/moon). Drop into any nav. */
+function theme_toggle_button(string $extraClass = ''): void
+{
+    $cls = trim('theme-toggle ' . $extraClass);
+    ?>
+<button class="<?= e($cls) ?>" type="button" data-theme-toggle aria-label="Toggle light/dark theme" title="Toggle theme">
+  <span class="theme-toggle__icon theme-toggle__icon--moon" aria-hidden="true">🌙</span>
+  <span class="theme-toggle__icon theme-toggle__icon--sun" aria-hidden="true">☀️</span>
+</button>
+<?php
 }
 
 function render_flashes(): void
@@ -65,6 +88,7 @@ function dash_header(string $title, array $user, array $nav, string $panelLabel)
       <h1 class="topbar__title"><?= e($title) ?></h1>
       <div class="topbar__user">
         <?php $unread = unread_count((int) $user['id']); ?>
+        <?php theme_toggle_button(); ?>
         <a class="bell" href="<?= url('notifications.php') ?>" title="Notifications">
           🔔<?php if ($unread): ?><span class="bell__badge"><?= $unread > 9 ? '9+' : $unread ?></span><?php endif; ?>
         </a>

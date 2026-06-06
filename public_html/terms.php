@@ -23,6 +23,7 @@ render_head('Terms and Conditions');
         <a href="<?= url('login.php') ?>">Log in</a>
         <a class="btn btn--sm" href="<?= url('register.php') ?>">Start free</a>
       <?php endif; ?>
+      <?php theme_toggle_button(); ?>
     </nav>
   </div>
 </header>

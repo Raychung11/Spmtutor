@@ -1,9 +1,15 @@
 /* ============================================================
-   SkillTutor AI - dark theme, purple gradient, mobile-first
+   LulusAI - themed UI (dark default, light optional)
+   Toggle via [data-theme="light"] on <html>. Preference persisted
+   in localStorage and applied pre-paint by an inline script in
+   render_head() so there is no flash-of-wrong-theme.
    ============================================================ */
-:root {
+:root, [data-theme="dark"] {
   --bg: #0f0b1e;
   --bg-2: #15102b;
+  --bg-glow: #2a1b5e;
+  --nav-bg: rgba(15,11,30,.82);
+  --nav-bg-strong: rgba(15,11,30,.92);
   --card: #1b1437;
   --card-2: #221a44;
   --border: #2e2553;
@@ -18,13 +24,37 @@
   --radius: 16px;
   --shadow: 0 10px 30px rgba(0,0,0,.35);
   --grad: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 50%, #4c1d95 100%);
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: #f7f4fc;
+  --bg-2: #ede7f8;
+  --bg-glow: #d9c9ff;
+  --nav-bg: rgba(255,255,255,.82);
+  --nav-bg-strong: rgba(255,255,255,.95);
+  --card: #ffffff;
+  --card-2: #faf7ff;
+  --border: #e0d6f0;
+  --text: #1f1a3a;
+  --muted: #6b5d8e;
+  --primary: #7c3aed;
+  --primary-2: #5b21b6;
+  --accent: #9333ea;
+  --good: #059669;
+  --bad: #dc2626;
+  --warn: #d97706;
+  --shadow: 0 4px 18px rgba(124,58,237,.10);
+  --grad: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
-  background: radial-gradient(1200px 600px at 80% -10%, #2a1b5e 0%, transparent 60%), var(--bg);
+  background: radial-gradient(1200px 600px at 80% -10%, var(--bg-glow) 0%, transparent 60%), var(--bg);
   color: var(--text);
+  transition: background-color .2s, color .2s;
   font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -180,7 +210,7 @@ body.nav-open .topbar__toggle span:nth-child(3) { transform: translateY(-7px) ro
   .botnav {
     display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
     position: fixed; bottom: 0; left: 0; right: 0; z-index: 50;
-    background: rgba(15,11,30,.92); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    background: var(--nav-bg-strong); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
     border-top: 1px solid var(--border); padding: 6px 4px;
     padding-bottom: max(6px, env(safe-area-inset-bottom));
     text-align: center;
@@ -220,7 +250,7 @@ footer.site { border-top: 1px solid var(--border); padding: 30px 0; color: var(-
 @media (max-width: 760px) { .hero h1 { font-size: 32px; } .nav__links a:not(.btn) { display: none; } }
 
 /* ---------- Marketing landing ---------- */
-.lnav { position: sticky; top: 0; z-index: 50; background: rgba(15,11,30,.82); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+.lnav { position: sticky; top: 0; z-index: 50; background: var(--nav-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
 .lnav__inner { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; }
 .lnav__links { display: flex; align-items: center; gap: 18px; }
 .lnav__links a { color: var(--muted); font-size: 14px; }
@@ -388,3 +418,32 @@ html { scroll-behavior: smooth; }
 .chip:hover { border-color: var(--primary); }
 .progress-bar { background: var(--bg-2); border-radius: 999px; height: 10px; overflow: hidden; border: 1px solid var(--border); }
 .progress-bar > span { display: block; height: 100%; background: var(--grad); }
+
+/* ---------- Theme toggle ---------- */
+.theme-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px;
+  padding: 0; margin: 0;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 16px; line-height: 1;
+  transition: border-color .15s, background .15s, transform .15s;
+}
+.theme-toggle:hover { border-color: var(--primary); background: var(--card-2); transform: translateY(-1px); }
+.theme-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.theme-toggle__icon--sun { display: none; }
+.theme-toggle__icon--moon { display: inline; }
+[data-theme="light"] .theme-toggle__icon--sun { display: inline; }
+[data-theme="light"] .theme-toggle__icon--moon { display: none; }
+
+/* Inputs need an explicit background swap on light theme — the dark
+   --bg-2 value works as a panel color in dark mode but reads as a card
+   in light mode. Override here so fields remain visually distinct. */
+[data-theme="light"] .input,
+[data-theme="light"] select,
+[data-theme="light"] textarea {
+  background: #ffffff;
+}

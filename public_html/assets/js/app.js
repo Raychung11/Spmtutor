@@ -153,4 +153,20 @@
       });
     });
   });
+
+  // ----- Theme toggle -----
+  document.querySelectorAll('[data-theme-toggle]').forEach(function (btn) {
+    function syncPressed() {
+      var cur = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+      btn.setAttribute('aria-pressed', cur === 'light' ? 'true' : 'false');
+    }
+    syncPressed();
+    btn.addEventListener('click', function () {
+      var cur = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark';
+      var next = cur === 'light' ? 'dark' : 'light';
+      document.documentElement.dataset.theme = next;
+      try { localStorage.setItem('lulusai-theme', next); } catch (e) {}
+      syncPressed();
+    });
+  });
 })();
