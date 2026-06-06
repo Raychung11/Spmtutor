@@ -1,0 +1,23 @@
+# SkillTutor AI - base hardening for Apache shared hosting (Hostinger).
+Options -Indexes
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Block access to sensitive dot-files and SQL dumps.
+<FilesMatch "(^\.|\.(sql|lock|md|log)$)">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Deny from all
+  </IfModule>
+</FilesMatch>
+
+# Allow .well-known if needed for SSL.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+</IfModule>

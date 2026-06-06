@@ -1,0 +1,182 @@
+openapi: 3.0.3
+info:
+  title: LulusAI Mobile API
+  version: "1.0"
+  description: >
+    Bearer-token REST API for the LulusAI mobile app. Obtain a token via
+    /auth, then send `Authorization: Bearer <token>` on all other calls.
+servers:
+  - url: /api/v1
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+security:
+  - bearerAuth: []
+paths:
+  /auth.php:
+    post:
+      summary: Login and receive a token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        "200":
+          description: Token and user profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  token_type: { type: string }
+                  expires_in_days: { type: integer }
+                  user: { type: object }
+        "401": { description: Invalid credentials, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+  /logout.php:
+    post:
+      summary: Revoke the current token
+      responses:
+        "200": { description: OK }
+  /me.php:
+    get:
+      summary: Current user, XP, streak, progress summary
+      responses:
+        "200": { description: Profile + progress }
+  /subjects.php:
+    get:
+      summary: List subjects, or topics for a subject
+      parameters:
+        - in: query
+          name: subject_id
+          schema: { type: integer }
+      responses:
+        "200": { description: Subjects or topics }
+  /progress.php:
+    get:
+      summary: Progress summary plus subject and topic stats
+      responses:
+        "200": { description: Progress }
+  /tutor.php:
+    post:
+      summary: Ask the AI tutor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: { type: string }
+                subject_id: { type: integer }
+                session_id: { type: integer }
+      responses:
+        "200": { description: Reply + session_id }
+        "429": { description: Rate limited }
+  /diagnostic.php:
+    get:
+      summary: Diagnostic questions for a subject, or past attempts
+      parameters:
+        - in: query
+          name: subject_id
+          schema: { type: integer }
+      responses:
+        "200": { description: Questions or attempts }
+    post:
+      summary: Submit a diagnostic
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject_id, answers]
+              properties:
+                subject_id: { type: integer }
+                answers:
+                  type: object
+                  additionalProperties: { type: integer }
+                  description: Map of question_id -> selected option_id
+      responses:
+        "200": { description: Score + strong/weak topics + recommendation }
+  /learning_path.php:
+    get:
+      summary: Active learning paths with items
+      responses:
+        "200": { description: Paths }
+    post:
+      summary: Update a learning-path item status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [item_id, status]
+              properties:
+                item_id: { type: integer }
+                status: { type: string, enum: [pending, in_progress, done] }
+      responses:
+        "200": { description: OK }
+  /assignments.php:
+    get:
+      summary: List the student's assignments
+      responses:
+        "200": { description: Assignments }
+    post:
+      summary: Submit an assignment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [assignment_id, content]
+              properties:
+                assignment_id: { type: integer }
+                content: { type: string }
+      responses:
+        "200": { description: OK }
+  /notifications.php:
+    get:
+      summary: List notifications
+      responses:
+        "200": { description: Notifications + unread count }
+    post:
+      summary: Mark all notifications read
+      responses:
+        "200": { description: OK }
+  /tokens.php:
+    get:
+      summary: List the user's API tokens
+      responses:
+        "200": { description: Tokens }
+    post:
+      summary: Revoke a token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, id]
+              properties:
+                action: { type: string, enum: [revoke] }
+                id: { type: integer }
+      responses:
+        "200": { description: OK }
