@@ -62,8 +62,28 @@ if (fcp_table_ready()) {
     }
 }
 
+// Region context: if the student's chosen exam has no subjects seeded
+// yet, surface a friendly "coming soon" banner instead of an empty
+// Subjects page. SPM users see nothing extra.
+$regionRow = db_one(
+    'SELECT el.id, el.name, el.slug,
+            (SELECT COUNT(*) FROM subjects s WHERE s.education_level_id = el.id AND s.status = "active") AS subject_count
+     FROM student_profiles sp JOIN education_levels el ON el.id = sp.education_level_id
+     WHERE sp.user_id = ?',
+    [$uid]
+);
+
 student_layout_start('Dashboard', $user, 'dashboard.php');
 ?>
+<?php if ($regionRow && (int) $regionRow['subject_count'] === 0): ?>
+  <div class="flash flash--info" style="margin-bottom:18px">
+    <strong><?= e((string) $regionRow['name']) ?> curriculum is coming soon.</strong>
+    You can explore the platform &mdash; AI Tutor, Writing Marker, AI Sandbox &mdash; today, and the full
+    <?= e((string) $regionRow['name']) ?> question bank + reference libraries will land in a future update.
+    Want early access? <a href="<?= url('') ?>#contact">Get in touch</a>.
+  </div>
+<?php endif; ?>
+
 <div class="grid grid--4">
   <div class="card stat"><div class="stat__value"><?= (int)$summary['total_questions'] ?></div><div class="stat__label">Questions answered</div></div>
   <div class="card stat"><div class="stat__value"><?= e(number_format((float)$summary['avg_score'], 0)) ?>%</div><div class="stat__label">Average score</div></div>

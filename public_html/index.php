@@ -77,7 +77,7 @@ render_head('Your personal AI tutor');
 <section class="lhero">
   <div class="container lhero__grid">
     <div class="lhero__copy">
-      <span class="pill">SPM &middot; PT3 &middot; UPSR &middot; STPM</span>
+      <span class="pill">SPM &middot; IGCSE &middot; PT3 &middot; UPSR &middot; STPM</span>
       <h1><span class="grad"><?= e($hero['title']) ?></span></h1>
       <p><?= e($hero['subtitle'] ?? '') ?></p>
       <div class="lhero__cta">

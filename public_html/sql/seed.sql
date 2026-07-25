@@ -9,11 +9,12 @@ SET NAMES utf8mb4;
 
 -- Education levels
 INSERT INTO education_levels (name, slug, sort_order) VALUES
-('UPSR', 'upsr', 1),
-('PT3',  'pt3',  2),
-('SPM',  'spm',  3),
-('STPM', 'stpm', 4)
-ON DUPLICATE KEY UPDATE name = VALUES(name);
+('UPSR',  'upsr',  10),
+('PT3',   'pt3',   20),
+('SPM',   'spm',   30),
+('STPM',  'stpm',  40),
+('IGCSE', 'igcse', 50)
+ON DUPLICATE KEY UPDATE name = VALUES(name), sort_order = VALUES(sort_order);
 
 -- Subjects (SPM level assumed id=3)
 INSERT INTO subjects (education_level_id, name, slug, icon, description, sort_order) VALUES

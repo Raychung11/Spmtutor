@@ -34,6 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $err = 'Please enter a valid email address.';
     } elseif (strlen($pass) < 8) {
         $err = 'Password must be at least 8 characters.';
+    } elseif ($role === 'student' && !$level) {
+        $err = 'Please choose which exam / education system you are preparing for.';
     }
 
     if ($err) {
@@ -96,13 +98,15 @@ render_head('Create account');
       <div class="field"><label>Full name *</label><input class="input" name="name" required></div>
       <div class="field"><label>Email *</label><input class="input" type="email" name="email" required></div>
       <div class="field"><label>Phone (optional)</label><input class="input" name="phone"></div>
-      <div class="field" id="levelField"><label>Education level</label>
-        <select name="education_level_id">
-          <option value="">-- select --</option>
+      <div class="field" id="levelField">
+        <label>Which exam / education system are you preparing for? *</label>
+        <select name="education_level_id" class="input">
+          <option value="">-- select an exam --</option>
           <?php foreach ($levels as $l): ?>
             <option value="<?= (int)$l['id'] ?>"><?= e($l['name']) ?></option>
           <?php endforeach; ?>
         </select>
+        <p class="muted" style="font-size:12px;margin:6px 0 0">SPM (Malaysia) has full curriculum content. IGCSE curriculum content is coming soon — you can still register and explore the platform.</p>
       </div>
       <div class="field" id="schoolField">
         <label>School / learning centre (optional)</label>
