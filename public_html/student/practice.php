@@ -2,12 +2,14 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../inc/auth.php';
 require_once __DIR__ . '/../inc/progress.php';
+require_once __DIR__ . '/../inc/region.php';
 require_once __DIR__ . '/../inc/student_layout.php';
 
 $user = require_role('student');
 $uid  = (int) $user['id'];
 
-$subjects  = db_all('SELECT id, name FROM subjects WHERE status = "active" ORDER BY sort_order');
+[$regionWhere, $regionArgs] = student_subjects_filter($uid);
+$subjects = db_all("SELECT id, name FROM subjects WHERE status = 'active' $regionWhere ORDER BY sort_order", $regionArgs);
 $subjectId = input_int('subject_id', (int) ($subjects[0]['id'] ?? 0));
 $feedback  = null;
 

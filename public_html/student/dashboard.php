@@ -62,12 +62,14 @@ if (fcp_table_ready()) {
     }
 }
 
-// Region context: if the student's chosen exam has no subjects seeded
-// yet, surface a friendly "coming soon" banner instead of an empty
-// Subjects page. SPM users see nothing extra.
+// Region context: if the student's chosen exam has no subjects OR no
+// topics seeded yet, surface a friendly "coming soon" banner explaining
+// which stage of curriculum build-out we're at. SPM users see nothing.
 $regionRow = db_one(
     'SELECT el.id, el.name, el.slug,
-            (SELECT COUNT(*) FROM subjects s WHERE s.education_level_id = el.id AND s.status = "active") AS subject_count
+            (SELECT COUNT(*) FROM subjects s WHERE s.education_level_id = el.id AND s.status = "active") AS subject_count,
+            (SELECT COUNT(*) FROM topics t JOIN subjects s ON s.id = t.subject_id
+             WHERE s.education_level_id = el.id AND s.status = "active") AS topic_count
      FROM student_profiles sp JOIN education_levels el ON el.id = sp.education_level_id
      WHERE sp.user_id = ?',
     [$uid]
@@ -79,8 +81,14 @@ student_layout_start('Dashboard', $user, 'dashboard.php');
   <div class="flash flash--info" style="margin-bottom:18px">
     <strong><?= e((string) $regionRow['name']) ?> curriculum is coming soon.</strong>
     You can explore the platform &mdash; AI Tutor, Writing Marker, AI Sandbox &mdash; today, and the full
-    <?= e((string) $regionRow['name']) ?> question bank + reference libraries will land in a future update.
+    <?= e((string) $regionRow['name']) ?> subject catalog + question banks will land in a future update.
     Want early access? <a href="<?= url('') ?>#contact">Get in touch</a>.
+  </div>
+<?php elseif ($regionRow && (int) $regionRow['topic_count'] === 0): ?>
+  <div class="flash flash--info" style="margin-bottom:18px">
+    <strong><?= e((string) $regionRow['name']) ?> subjects are live &mdash; topic content is still being seeded.</strong>
+    You can already see the subject catalog, and the AI Tutor / Writing Marker / AI Sandbox work today.
+    Question banks and diagnostics for each subject will unlock as they're populated.
   </div>
 <?php endif; ?>
 

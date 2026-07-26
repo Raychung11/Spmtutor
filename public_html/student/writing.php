@@ -93,7 +93,14 @@ if ($tableReady) {
     );
 }
 
-$subjects = db_all('SELECT id, slug, name FROM subjects WHERE slug IN ("bahasa-melayu", "english", "kepintaran-buatan") ORDER BY name');
+// Writing-marker subjects: BM + English + Pioneer AI (SPM) and their IGCSE counterparts
+// once seeded. Any subject whose slug matches these language-oriented buckets is fair game.
+$subjects = db_all(
+    'SELECT id, slug, name FROM subjects
+     WHERE slug IN ("bahasa-melayu", "english", "kepintaran-buatan",
+                    "igcse-english-first", "igcse-english-second", "igcse-english-lit")
+     ORDER BY name'
+);
 
 student_layout_start('Writing Marker', $user, 'writing.php');
 ?>

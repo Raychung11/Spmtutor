@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../inc/auth.php';
 require_once __DIR__ . '/../inc/marking.php';
+require_once __DIR__ . '/../inc/region.php';
 require_once __DIR__ . '/../inc/student_layout.php';
 
 $user = require_role('student');
@@ -27,7 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect('student/snap_check.php?upload=' . $uploadId);
 }
 
-$subjects  = db_all('SELECT id, name FROM subjects WHERE status = "active" ORDER BY sort_order');
+[$regionWhere, $regionArgs] = student_subjects_filter((int) $user['id']);
+$subjects = db_all("SELECT id, name FROM subjects WHERE status = 'active' $regionWhere ORDER BY sort_order", $regionArgs);
 $questions = db_all('SELECT id, question_text FROM questions WHERE status = "active" ORDER BY id DESC LIMIT 50');
 
 $viewId = input_int('upload');

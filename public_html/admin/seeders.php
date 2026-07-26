@@ -563,6 +563,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 break;
 
+            case 'igcse_subjects':
+                require_once __DIR__ . '/../cron/seed_igcse_subjects.php';
+                $r = seed_igcse_subjects_run();
+                $lines = [];
+                if (!empty($r['level_auto_created'])) {
+                    $lines[] = 'IGCSE education level auto-created.';
+                }
+                $lines[] = 'Subjects created: ' . $r['created'];
+                $lines[] = 'Subjects kept (already present): ' . $r['kept'];
+                $lines[] = 'Catalog total: ' . $r['total'];
+                $lines[] = 'Includes: Mathematics, Additional Maths, English (First/Second/Lit), Biology, Chemistry, Physics, Combined Science, History, Geography, Economics, Business Studies, Computer Science, ICT, Art & Design, Global Perspectives, Islamiyat.';
+                $output = ['title' => 'IGCSE subjects seeded', 'lines' => $lines, 'kind' => 'success'];
+                break;
+
             case 'education_levels':
                 require_once __DIR__ . '/../cron/seed_education_levels.php';
                 $r = seed_education_levels_run();
@@ -639,6 +653,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $seeders = [
     ['key' => 'migrations',       'name' => 'Run database migrations', 'desc' => 'Apply any pending sql/migrations/*.sql files (e.g. phase4, phase5, phase6 school portal, phase7 invitations, phase8 leads). Each file runs at most once. Tracks state in an applied_migrations table.', 'has_force' => true],
     ['key' => 'education_levels', 'name' => 'Education levels (regions)', 'desc' => 'Seed the education levels catalog — Malaysian ladder (UPSR / PT3 / SPM / STPM) plus IGCSE (Cambridge International). Idempotent: existing rows are refreshed with the latest name / sort order; user profiles keep their chosen level. Run this once so IGCSE appears in the registration dropdown.'],
+    ['key' => 'igcse_subjects',   'name' => 'IGCSE subjects (Cambridge International)', 'desc' => 'Seed the 18 most-offered Cambridge IGCSE subjects: Mathematics (0580), Additional Maths (0606), English First/Second/Literature (0500/0510/0475), Biology (0610), Chemistry (0620), Physics (0625), Combined Science (0653), History (0470), Geography (0460), Economics (0455), Business Studies (0450), Computer Science (0478), ICT (0417), Art & Design (0400), Global Perspectives (0457), Islamiyat (0493). Cambridge syllabus codes are baked into descriptions for cross-reference. Auto-bootstraps the IGCSE education_level row if the "Education levels" seeder hasn\'t run yet. Idempotent — existing IGCSE subjects (matched by slug or name) are kept. Curriculum content (topics / subtopics / skills / question banks) is a follow-up.'],
     ['key' => 'dedupe_subjects','name' => 'Deduplicate subjects (maintenance)', 'desc' => 'Find subjects that share an (education_level, slug) or (education_level, name) — usually from running an import twice — and merge them. Re-points every dependent row (topics, questions, lessons, diagnostic tests, learning paths, teacher classes, chat sessions, essay submissions, sandbox runs, student stats) to the lowest-id keeper, then deletes the duplicates. Runs as DRY-RUN by default — tick "Force re-run" to actually commit the merge. Note: this dedupes the SUBJECTS rows; if you imported topics/skills twice too, run the matching subject seeder again afterwards (it is idempotent) or ask for a topics-level dedupe.', 'has_force' => true],
     ['key' => 'courses',        'name' => 'Seed courses',         'desc' => 'Add the topics, skills and MCQs from the course catalog (Math, Add Maths, Physics, Chemistry, Biology, English, BM). Idempotent — already-present items are skipped.'],
     ['key' => 'demo_logins',    'name' => 'Demo logins (5 roles)','desc' => 'Create one demo account per role (student, parent, teacher, school admin, platform admin) with predictable credentials and sensible relationships.'],

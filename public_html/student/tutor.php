@@ -1,12 +1,14 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/../inc/auth.php';
+require_once __DIR__ . '/../inc/region.php';
 require_once __DIR__ . '/../inc/student_layout.php';
 
 $user = require_role('student');
 $uid  = (int) $user['id'];
 
-$subjects = db_all('SELECT id, name FROM subjects WHERE status = "active" ORDER BY sort_order');
+[$regionWhere, $regionArgs] = student_subjects_filter($uid);
+$subjects = db_all("SELECT id, name FROM subjects WHERE status = 'active' $regionWhere ORDER BY sort_order", $regionArgs);
 $recent   = db_all('SELECT id, title, created_at FROM ai_chat_sessions WHERE user_id = ? ORDER BY updated_at DESC LIMIT 8', [$uid]);
 
 student_layout_start('AI Tutor', $user, 'tutor.php');
